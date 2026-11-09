@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient, getUserId } from "@/lib/supabase/server";
-import { ageOn, calorieTarget, type CalorieTarget } from "@/lib/tdee";
+import { ageOn, calorieTarget, macroSplit, type CalorieTarget, type Macros } from "@/lib/tdee";
 import { parseDay } from "@/lib/dates";
 import type { Profile, WeightEntry } from "@/lib/types";
 
@@ -9,6 +9,8 @@ export type ProfileSummary = {
   latestWeight: WeightEntry | null;
   /** null until enough stats are filled in. */
   target: CalorieTarget | null;
+  /** What the app actually aims for: the manual override if set, else the calculated target. */
+  daily: { kcal: number; macros: Macros } | null;
   missing: string[];
 };
 
@@ -47,5 +49,15 @@ export async function getProfileSummary(): Promise<ProfileSummary | null> {
         })
       : null;
 
-  return { profile, latestWeight: latestWeight ?? null, target, missing };
+  const override = profile.kcal_target_override;
+  const refWeight =
+    profile.goal_weight_lb != null ? Number(profile.goal_weight_lb) : latestWeight ? Number(latestWeight.weight_lb) : null;
+  const daily =
+    override != null && refWeight != null
+      ? { kcal: override, macros: macroSplit(override, refWeight) }
+      : target
+        ? { kcal: target.targetKcal, macros: target.macros }
+        : null;
+
+  return { profile, latestWeight: latestWeight ?? null, target, daily, missing };
 }

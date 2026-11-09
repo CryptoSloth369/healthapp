@@ -24,3 +24,10 @@ export function formatLongDate(date: Date): string {
 export function formatDay(day: string, opts: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" }): string {
   return parseDay(day).toLocaleDateString("en-US", opts);
 }
+
+/** Shift a "YYYY-MM-DD" by whole days. */
+export function addDays(day: string, n: number): string {
+  const d = parseDay(day);
+  d.setDate(d.getDate() + n);
+  return toDay(d);
+}

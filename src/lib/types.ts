@@ -21,3 +21,31 @@ export type WeightEntry = {
   body_fat_pct: number | null;
   note: string | null;
 };
+
+export type FoodEntry = {
+  id: number;
+  eaten_on: string;
+  meal: "breakfast" | "lunch" | "dinner" | "snack";
+  name: string;
+  servings: number;
+  serving: string | null;
+  kcal: number; // totals for the entry (already × servings)
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+  source: "manual" | "saved" | "photo" | "barcode" | "search";
+  saved_food_id: number | null;
+  note: string | null;
+};
+
+export type SavedFood = {
+  id: number;
+  name: string;
+  serving: string | null;
+  kcal: number; // per serving
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+  use_count: number;
+  last_used_at: string | null;
+};
