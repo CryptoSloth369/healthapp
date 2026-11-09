@@ -49,6 +49,7 @@ src/
   app/
     (app)/            signed-in pages with the bottom tab bar
       page.tsx        Today
+      dashboard/      trends: calories, weight, macros, adaptive TDEE, weekly table
       food/           daily food log, add (search/quick picks/manual), edit
       weight/         weigh-ins: log, chart, history
       profile/        body stats, goal, calorie target, change password
@@ -59,6 +60,7 @@ src/
     tdee.ts           BMR / TDEE / goal-based calorie target (+ tests)
     nutrition.ts      meal helpers, totals, per-serving scaling (+ tests)
     food.ts           food log + quick-pick queries
+    analytics.ts      daily totals, adherence, adaptive TDEE, weekly rows (+ tests)
     trend.ts          smoothed weight trend + weekly rate (+ tests)
     today.ts          "today" in the user's time zone (tz cookie)
     profile.ts        loads profile + latest weight, computes the target

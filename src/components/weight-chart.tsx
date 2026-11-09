@@ -16,7 +16,16 @@ type RangeKey = (typeof RANGES)[number]["key"];
 const HEIGHT = 220;
 const M = { top: 12, right: 12, bottom: 24, left: 40 };
 
-export function WeightChart({ points, goalLb }: { points: TrendPoint[]; goalLb: number | null }) {
+/** Pass `rangeDays` to lock the range (dashboard) and hide the range buttons. */
+export function WeightChart({
+  points,
+  goalLb,
+  rangeDays,
+}: {
+  points: TrendPoint[];
+  goalLb: number | null;
+  rangeDays?: number;
+}) {
   const [range, setRange] = useState<RangeKey>("90");
   const [hover, setHover] = useState<number | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -33,7 +42,7 @@ export function WeightChart({ points, goalLb }: { points: TrendPoint[]; goalLb: 
   const view = useMemo(() => {
     if (points.length === 0) return null;
     const last = points[points.length - 1].day;
-    const days = RANGES.find((r) => r.key === range)!.days;
+    const days = rangeDays ?? RANGES.find((r) => r.key === range)!.days;
     const pts = points.filter((p) => daysBetween(p.day, last) < days);
     const first = pts[0].day;
     const span = Math.max(1, daysBetween(first, last));
@@ -65,7 +74,7 @@ export function WeightChart({ points, goalLb }: { points: TrendPoint[]; goalLb: 
 
     const trendPath = pts.map((p, i) => `${i ? "L" : "M"}${x(p.day).toFixed(1)},${y(p.trend).toFixed(1)}`).join("");
     return { pts, x, y, ticks, xTicks, trendPath, showGoal, iw };
-  }, [points, range, width, goalLb]);
+  }, [points, range, width, goalLb, rangeDays]);
 
   if (!view) {
     return <p className="py-10 text-center text-sm text-muted">Log a weigh-in to start your chart.</p>;
@@ -102,6 +111,7 @@ export function WeightChart({ points, goalLb }: { points: TrendPoint[]; goalLb: 
             Trend
           </li>
         </ul>
+        {rangeDays == null && (
         <div className="flex rounded-lg border border-border p-0.5 text-xs" role="group" aria-label="Time range">
           {RANGES.map((r) => (
             <button
@@ -118,6 +128,7 @@ export function WeightChart({ points, goalLb }: { points: TrendPoint[]; goalLb: 
             </button>
           ))}
         </div>
+        )}
       </div>
 
       <div ref={wrapRef} className="relative">

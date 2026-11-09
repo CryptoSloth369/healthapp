@@ -100,3 +100,22 @@ export async function getQuickPicks(): Promise<QuickPick[]> {
   }
   return picks;
 }
+
+/** Nutrient rows for a date range (inclusive), for dashboard aggregation. */
+export async function getEntriesBetween(start: string, end: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("food_entry")
+    .select("eaten_on, kcal, protein_g, carbs_g, fat_g")
+    .gte("eaten_on", start)
+    .lte("eaten_on", end)
+    .limit(10000)
+    .overrideTypes<{ eaten_on: string; kcal: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[], { merge: false }>();
+  return (data ?? []).map((e) => ({
+    eaten_on: e.eaten_on,
+    kcal: Number(e.kcal),
+    protein_g: num(e.protein_g),
+    carbs_g: num(e.carbs_g),
+    fat_g: num(e.fat_g),
+  }));
+}
