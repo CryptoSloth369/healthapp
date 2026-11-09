@@ -86,8 +86,8 @@ make this useful instead of misleading. Cost is roughly a cent or two per photo.
 
 | Step | Deliverable |
 |---|---|
-| 0 | Decisions + scaffold: Next.js + TS + Tailwind, Supabase project, auth, deploy to Vercel |
-| 1 | Database schema + migrations + generated TypeScript types |
+| 0 ✅ | Scaffold: Next.js + TS + Tailwind, Supabase auth, PWA manifest/icons, profile + calorie target |
+| 1 ✅ | Database schema + row-level security (`supabase/migrations/0001_initial_schema.sql`) |
 | 2 | **Weight log**: the simplest end-to-end slice (form → DB → list → chart) |
 | 3 | **Calorie logging**: manual entry, daily view, saved foods / quick-add |
 | 4 | **Dashboard v1**: weight trend, calories vs target, goals |
@@ -97,8 +97,14 @@ make this useful instead of misleading. Cost is roughly a cent or two per photo.
 | 8 | PWA polish: installable, offline-tolerant entry, reminders |
 | 9 | Extras: barcode scan (Open Food Facts), USDA food search, CSV export, Apple Health / Health Connect import (via an Expo shell if needed) |
 
-## Open decisions
-- Phone OS (iOS or Android): affects PWA quirks and any later Health integration.
-- Is Apple Health / Google Fit sync a must-have soon? If yes, start with Expo instead.
-- Units (lb/kg) and the daily calorie target: set from your stats or entered manually.
-- Accounts needed: Supabase, Vercel, Anthropic API key.
+## Decisions
+- **Phone:** iPhone. The app is installed as a PWA from Safari ("Add to Home Screen").
+- **Health sync:** not needed yet (no tracking device). We stay on the PWA and revisit Expo if that changes.
+- **Units:** imperial (lb, ft/in). The database stores `weight_lb` and `height_in` directly.
+- **Calorie target:** calculated as Mifflin–St Jeor BMR × activity multiplier, then adjusted toward
+  the goal (goal weight + date) at ~3,500 kcal/lb. Loss is capped at 1% of body weight per week and gain
+  at 0.5%/week, with a floor of 1,500 kcal (male) or 1,200 kcal (female). A manual override is available.
+  Macros: protein 0.8 g/lb of goal weight, fat 25% of kcal, carbs the rest. Later, an adaptive TDEE
+  from logged intake vs the weight trend will refine this.
+- **Auth:** email + password, a single user created in the Supabase dashboard, sign-ups disabled.
+- **Accounts:** Supabase, Vercel and an Anthropic API key (the API key is needed at step 5).
