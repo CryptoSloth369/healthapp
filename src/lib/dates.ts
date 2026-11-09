@@ -19,3 +19,8 @@ export function isDay(s: unknown): s is string {
 export function formatLongDate(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
+
+/** "2026-11-09" → "Mon, Nov 9" (no time-zone shifting). */
+export function formatDay(day: string, opts: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" }): string {
+  return parseDay(day).toLocaleDateString("en-US", opts);
+}

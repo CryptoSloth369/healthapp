@@ -88,7 +88,7 @@ make this useful instead of misleading. Cost is roughly a cent or two per photo.
 |---|---|
 | 0 ✅ | Scaffold: Next.js + TS + Tailwind, Supabase auth, PWA manifest/icons, profile + calorie target |
 | 1 ✅ | Database schema + row-level security (`supabase/migrations/0001_initial_schema.sql`) |
-| 2 | **Weight log**: the simplest end-to-end slice (form → DB → list → chart) |
+| 2 ✅ | **Weight log**: quick weigh-in on Today, history with edit/delete, chart with smoothed trend + goal line, weekly rate |
 | 3 | **Calorie logging**: manual entry, daily view, saved foods / quick-add |
 | 4 | **Dashboard v1**: weight trend, calories vs target, goals |
 | 5 | **Photo estimator**: upload, Claude vision, review screen |

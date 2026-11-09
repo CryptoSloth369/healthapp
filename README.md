@@ -49,12 +49,15 @@ src/
   app/
     (app)/            signed-in pages with the bottom tab bar
       page.tsx        Today
-      profile/        body stats, goal, calorie target
+      weight/         weigh-ins: log, chart, history
+      profile/        body stats, goal, calorie target, change password
     login/            sign-in page + auth server actions
     manifest.ts       PWA manifest
   components/         UI pieces
   lib/
     tdee.ts           BMR / TDEE / goal-based calorie target (+ tests)
+    trend.ts          smoothed weight trend + weekly rate (+ tests)
+    today.ts          "today" in the user's time zone (tz cookie)
     profile.ts        loads profile + latest weight, computes the target
     supabase/         browser, server and proxy clients
   proxy.ts            refreshes the session and redirects signed-out visitors

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 // Tabs get added here as each feature is built.
 const TABS = [
   { href: "/", label: "Today", icon: "M3 12l9-8 9 8M5 10v10h14V10" },
+  { href: "/weight", label: "Weight", icon: "M3 17l6-6 4 4 8-8M15 7h6v6" },
   { href: "/profile", label: "Profile", icon: "M12 12a4 4 0 100-8 4 4 0 000 8zm-8 9a8 8 0 0116 0" },
 ];
 

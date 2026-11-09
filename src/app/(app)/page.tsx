@@ -1,24 +1,33 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getProfileSummary } from "@/lib/profile";
+import { getWeightHistory } from "@/lib/weight";
+import { todayLocal } from "@/lib/today";
+import { formatDay } from "@/lib/dates";
 import { TargetCard } from "@/components/target-card";
+import { QuickWeighIn } from "@/components/quick-weigh-in";
 import { button, card } from "@/components/ui";
 
 export default async function TodayPage() {
-  const summary = await getProfileSummary();
+  const [summary, history, today] = await Promise.all([getProfileSummary(), getWeightHistory(), todayLocal()]);
   if (!summary) redirect("/login");
-  const { profile, target, missing, latestWeight } = summary;
+  const { profile, target, missing } = summary;
+  const todayEntry = history.entries.find((e) => e.measured_on === today);
+  const latest = history.points.at(-1);
 
   return (
     <div className="space-y-4">
       <header>
-        <p className="text-sm text-muted">
-          {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-        </p>
-        <h1 className="text-2xl font-bold">
-          {profile.display_name ? `Hi, ${profile.display_name}` : "Today"}
-        </h1>
+        <p className="text-sm text-muted">{formatDay(today, { weekday: "long", month: "long", day: "numeric" })}</p>
+        <h1 className="text-2xl font-bold">{profile.display_name ? `Hi, ${profile.display_name}` : "Today"}</h1>
       </header>
+
+      <QuickWeighIn
+        today={today}
+        todayWeight={todayEntry ? Number(todayEntry.weight_lb) : null}
+        trend={latest?.trend ?? null}
+        rate={history.rateLbPerWeek}
+      />
 
       {target ? (
         <TargetCard target={target} override={profile.kcal_target_override} />
@@ -28,23 +37,13 @@ export default async function TodayPage() {
           <p className="text-sm text-muted">
             Missing: {missing.join(", ")}. These are needed to calculate your calorie target.
           </p>
-          <Link href="/profile" className={`${button} inline-block`}>Set up profile</Link>
+          <Link href="/profile" className={`${button} inline-block`}>
+            Set up profile
+          </Link>
         </section>
       )}
 
-      {latestWeight && (
-        <section className={card}>
-          <p className="text-sm text-muted">Latest weight</p>
-          <p className="text-2xl font-semibold tabular-nums">
-            {Number(latestWeight.weight_lb).toFixed(1)} lb
-          </p>
-          <p className="text-xs text-muted">{latestWeight.measured_on}</p>
-        </section>
-      )}
-
-      <p className="text-center text-xs text-muted">
-        Food, weight history, mood and the dashboard are coming in the next steps.
-      </p>
+      <p className="text-center text-xs text-muted">Food, mood and the dashboard are coming in the next steps.</p>
     </div>
   );
 }

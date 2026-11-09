@@ -11,6 +11,10 @@
   --accent-fg: #052e1f;
   --danger: #f87171;
   --warn: #fbbf24;
+  /* Chart series (validated for color-blind separation on --surface). */
+  --series-trend: #3987e5;
+  --series-raw: #199e70;
+  --grid: #262b33;
 }
 
 @media (prefers-color-scheme: light) {
@@ -24,6 +28,9 @@
     --accent-fg: #ffffff;
     --danger: #dc2626;
     --warn: #b45309;
+    --series-trend: #2a78d6;
+    --series-raw: #1baf7a;
+    --grid: #e6e8ec;
   }
 }
 
@@ -37,6 +44,8 @@
   --color-accent-fg: var(--accent-fg);
   --color-danger: var(--danger);
   --color-warn: var(--warn);
+  --color-series-trend: var(--series-trend);
+  --color-series-raw: var(--series-raw);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
