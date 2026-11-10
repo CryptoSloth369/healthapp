@@ -2,7 +2,7 @@
 
 The fastest way for a new person or AI agent to pick up this project. Read this, then [`CLAUDE.md`](../CLAUDE.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-_Last updated: 2026-11-10, after roadmap step 10._
+_Last updated: 2026-11-10, after the coach's first real use._
 
 ## Where things stand
 All ten planned steps are built and merged to `main`, which Vercel deploys to production. See [`ROADMAP.md`](ROADMAP.md).
@@ -23,13 +23,13 @@ All ten planned steps are built and merged to `main`, which Vercel deploys to pr
 Everything has unit tests (`npm test`) and was exercised in a headless iPhone-sized browser with sample data. These parts could **not** be tested from the build environment and need a first real use:
 
 - [ ] **Photo estimator** against the real Claude API (needs `ANTHROPIC_API_KEY`).
-- [ ] **AI coach** with real answers. The loop was tested against a fake streaming API with the real SDK.
+- [x] **AI coach** with real answers. Works in production (first run failed with a 400 until the Anthropic account had credits).
 - [ ] **USDA search / Open Food Facts barcode lookup**. Parsers were written against the documented formats; the build sandbox had no network access to them.
 - [ ] **Push reminders on the iPhone**, end to end with the `pg_cron` schedule.
 - [ ] **Barcode camera on the iPhone**. Tested in Chromium with a simulated camera and a decoded test image.
 - [ ] **Exports** against real Supabase data.
 
-When one of these misbehaves, the useful evidence is a screenshot plus, for server issues, Vercel → Deployments → Functions logs. For reminders, run the SQL checks in [`supabase/reminders-schedule.sql`](../supabase/reminders-schedule.sql).
+When one of these misbehaves, the useful evidence is a screenshot plus, for server issues, Vercel → Deployments → Functions logs. Claude API failures show Anthropic's reason in the app and log the status, request id and error body. For reminders, run the SQL checks in [`supabase/reminders-schedule.sql`](../supabase/reminders-schedule.sql).
 
 ## Production setup checklist (owner's account)
 Tick as done. The full steps are in the [README](../README.md#setup-from-scratch).
@@ -37,7 +37,7 @@ Tick as done. The full steps are in the [README](../README.md#setup-from-scratch
 - [ ] Supabase migrations run in order: `0001` · `0002` · `0003` · `0004`
 - [ ] User created after `0001`; public sign-ups disabled
 - [ ] Vercel env: Supabase URL + publishable key
-- [ ] Vercel env: `ANTHROPIC_API_KEY`
+- [x] Vercel env: `ANTHROPIC_API_KEY` (and the Anthropic account has credits; with none, every Claude call fails with a 400)
 - [ ] Vercel env: `USDA_API_KEY` (optional; otherwise DEMO_KEY rate limits)
 - [ ] Reminders: VAPID keys + `CRON_SECRET` in Vercel; `pg_cron` + `pg_net` enabled; schedule SQL run
 - [ ] Profile → Activity level set to "outside logged workouts" (avoids double-counting exercise)
