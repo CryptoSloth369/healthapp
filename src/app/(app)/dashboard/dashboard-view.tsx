@@ -9,6 +9,8 @@ import { WeightChart } from "@/components/weight-chart";
 import { Meter } from "@/components/meter";
 import { card } from "@/components/ui";
 import { ApplyTargetButton } from "./apply-target";
+import { MoodHeatmap } from "@/components/mood-heatmap";
+import { calorieSplit, dailyMood, exerciseSplit, MOOD_LABELS, sleepSplit, tagStats, type MoodRow, type Split } from "@/lib/mood";
 
 export const RANGES = { "4w": { days: 28, label: "4W" }, "12w": { days: 84, label: "12W" }, "6m": { days: 182, label: "6M" } } as const;
 export type RangeKey = keyof typeof RANGES;
@@ -21,12 +23,14 @@ export function DashboardView({
   summary,
   history,
   entries,
+  moods,
 }: {
   range: RangeKey;
   today: string;
   summary: ProfileSummary;
   history: WeightHistory;
   entries: { eaten_on: string; kcal: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[];
+  moods: MoodRow[];
 }) {
   const span = RANGES[range].days;
   const start = addDays(today, -(span - 1));
@@ -67,6 +71,19 @@ export function DashboardView({
           kcal: w.avgKcal,
           label: `Week of ${formatDay(w.weekStart, { month: "short", day: "numeric" })}`,
         }));
+
+  // Mood vs sleep, calories and tags over the range.
+  const moodDays = dailyMood(moods.filter((m) => m.logged_on >= start));
+  const avgMood = moodDays.length ? Math.round((moodDays.reduce((a, d) => a + d.mood, 0) / moodDays.length) * 10) / 10 : null;
+  const sleepDays = moodDays.filter((d) => d.sleep != null);
+  const avgSleep = sleepDays.length ? Math.round((sleepDays.reduce((a, d) => a + d.sleep!, 0) / sleepDays.length) * 10) / 10 : null;
+  const kcalByDay = new Map(days.filter((d) => d.logged).map((d) => [d.day, d.kcal]));
+  const splits = [
+    sleepSplit(moodDays),
+    target ? calorieSplit(moodDays, kcalByDay, target) : null,
+    exerciseSplit(moodDays),
+  ].filter((x): x is Split => x != null);
+  const tags = tagStats(moodDays).slice(0, 6);
 
   // Adaptive TDEE over the last 4 weeks, excluding today (still in progress).
   const adaptive = adaptiveTdee(dailyTotals(entries, adaptiveStart, yesterday), points);
@@ -212,6 +229,81 @@ export function DashboardView({
         )}
       </section>
 
+      <section className={`${card} space-y-3`}>
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-semibold">Mood</h2>
+          <Link href="/mood" className="text-sm text-accent">
+            Check in →
+          </Link>
+        </div>
+        {moodDays.length === 0 ? (
+          <p className="text-sm text-muted">No mood check-ins in this range yet.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <p className="text-xs text-muted">Average mood</p>
+                <p className="text-xl font-semibold">
+                  {avgMood} <span className="text-sm font-normal text-muted">{MOOD_LABELS[Math.round(avgMood!)]}</span>
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted">Average sleep</p>
+                <p className="text-xl font-semibold">{avgSleep == null ? "—" : `${avgSleep}h`}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted">Days checked in</p>
+                <p className="text-xl font-semibold">
+                  {moodDays.length}
+                  <span className="text-sm font-normal text-muted">/{days.length}</span>
+                </p>
+              </div>
+            </div>
+            <MoodHeatmap days={moodDays} today={today} weeks={Math.ceil(span / 7)} />
+
+            {splits.length > 0 && (
+              <div className="space-y-2 border-t border-border pt-3">
+                <h3 className="text-sm font-semibold">What goes with a better mood</h3>
+                {splits.map((sp) => (
+                  <SplitRow key={sp.label} split={sp} />
+                ))}
+              </div>
+            )}
+            {tags.length > 0 && (
+              <table className="w-full text-sm">
+                <thead className="text-left text-xs text-muted">
+                  <tr>
+                    <th className="py-1 font-normal">Tag</th>
+                    <th className="py-1 text-right font-normal">Days</th>
+                    <th className="py-1 text-right font-normal">Avg mood</th>
+                    <th className="py-1 text-right font-normal">vs usual</th>
+                  </tr>
+                </thead>
+                <tbody className="tabular-nums">
+                  {tags.map((t) => (
+                    <tr key={t.tag} className="border-t border-border">
+                      <td className="py-1.5">{t.tag}</td>
+                      <td className="py-1.5 text-right text-muted">{t.days}</td>
+                      <td className="py-1.5 text-right">{t.mood.toFixed(1)}</td>
+                      <td className="py-1.5 text-right text-muted">
+                        {t.diff > 0 ? "+" : ""}
+                        {t.diff.toFixed(1)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {splits.length === 0 && tags.length === 0 && (
+              <p className="text-xs text-muted">
+                Insights appear after a few days of check-ins with sleep and tags (at least 3 days on each side of a comparison).
+              </p>
+            )}
+            <p className="text-xs text-muted">These are patterns in your own logs, not proof of cause and effect.</p>
+          </>
+        )}
+      </section>
+
       <section className={card}>
         <h2 className="mb-2 font-semibold">Weekly summary</h2>
         {weeklyRows.length === 0 && <p className="text-sm text-muted">No data in this range yet.</p>}
@@ -240,6 +332,32 @@ export function DashboardView({
           </tbody>
         </table>
       </section>
+    </div>
+  );
+}
+
+function SplitRow({ split }: { split: Split }) {
+  const diff = Math.round((split.a.mood - split.b.mood) * 10) / 10;
+  return (
+    <div className="text-sm">
+      <div className="grid grid-cols-2 gap-2">
+        {[split.a, split.b].map((g) => (
+          <div key={g.name} className="rounded-xl bg-background px-3 py-2">
+            <p className="text-xs text-muted">{g.name}</p>
+            <p>
+              <span className="font-semibold">{g.mood.toFixed(1)}</span>{" "}
+              <span className="text-xs text-muted">
+                avg · {g.days} day{g.days === 1 ? "" : "s"}
+              </span>
+            </p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-1 text-xs text-muted">
+        {Math.abs(diff) < 0.3
+          ? "About the same either way."
+          : `Mood ${diff > 0 ? "higher" : "lower"} by ${Math.abs(diff).toFixed(1)} on "${split.a.name.toLowerCase()}" days.`}
+      </p>
     </div>
   );
 }

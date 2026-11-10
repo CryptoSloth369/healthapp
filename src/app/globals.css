@@ -15,6 +15,18 @@
   --series-trend: #3987e5;
   --series-raw: #199e70;
   --grid: #262b33;
+  /* Mood 1→5, one blue hue (validated ordinal ramp; brighter = better on dark). */
+  --mood-1: #184f95;
+  --mood-2: #256abf;
+  --mood-3: #3987e5;
+  --mood-4: #6da7ec;
+  --mood-5: #9ec5f4;
+  /* Label ink on each mood color, chosen by the fill's lightness. */
+  --mood-1-fg: #ffffff;
+  --mood-2-fg: #ffffff;
+  --mood-3-fg: #ffffff;
+  --mood-4-fg: #0b0d10;
+  --mood-5-fg: #0b0d10;
 }
 
 @media (prefers-color-scheme: light) {
@@ -31,6 +43,17 @@
     --series-trend: #2a78d6;
     --series-raw: #1baf7a;
     --grid: #e6e8ec;
+    /* Darker = better on light. */
+    --mood-1: #86b6ef;
+    --mood-2: #5598e7;
+    --mood-3: #2a78d6;
+    --mood-4: #1c5cab;
+    --mood-5: #104281;
+    --mood-1-fg: #0b0d10;
+    --mood-2-fg: #0b0d10;
+    --mood-3-fg: #ffffff;
+    --mood-4-fg: #ffffff;
+    --mood-5-fg: #ffffff;
   }
 }
 

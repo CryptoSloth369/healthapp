@@ -56,6 +56,7 @@ src/
       page.tsx        Today
       dashboard/      trends: calories, weight, macros, adaptive TDEE, weekly table
       food/           daily food log, add (search/quick picks/manual), photo estimate, edit
+      mood/           mood check-ins, heatmap, history
       weight/         weigh-ins: log, chart, history
       profile/        body stats, goal, calorie target, change password
     login/            sign-in page + auth server actions
@@ -67,6 +68,7 @@ src/
     food.ts           food log + quick-pick queries
     photo-estimate*.ts  Claude vision call + output schema (+ tests)
     analytics.ts      daily totals, adherence, adaptive TDEE, weekly rows (+ tests)
+    mood.ts           daily mood, sleep/calorie/exercise comparisons, tag stats (+ tests)
     trend.ts          smoothed weight trend + weekly rate (+ tests)
     today.ts          "today" in the user's time zone (tz cookie)
     profile.ts        loads profile + latest weight, computes the target

@@ -51,3 +51,15 @@ export type SavedFood = {
   use_count: number;
   last_used_at: string | null;
 };
+
+export type MoodEntry = {
+  id: number;
+  logged_on: string;
+  logged_at: string;
+  mood: number;
+  energy: number | null;
+  stress: number | null;
+  sleep_hours: number | null;
+  tags: string[];
+  note: string | null;
+};
