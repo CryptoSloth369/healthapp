@@ -37,7 +37,17 @@ npm run dev                  # http://localhost:3000
 2. In Vercel, add `ANTHROPIC_API_KEY` as a **Secret** environment variable, then redeploy.
 Each photo costs roughly 2–5 cents.
 
-### 5. Install on iPhone
+### 5. Reminders (optional)
+1. Run [`supabase/migrations/0003_reminders.sql`](supabase/migrations/0003_reminders.sql) in the SQL Editor if you haven't.
+2. In the app, open **Profile → Reminders: one-time setup → Generate keys**. Add the three values to Vercel
+   (`NEXT_PUBLIC_VAPID_PUBLIC_KEY` as Config; `VAPID_PRIVATE_KEY` and `CRON_SECRET` as Secrets), then redeploy.
+3. In Supabase, **Database → Extensions**: enable `pg_cron` and `pg_net`.
+4. Copy [`supabase/reminders-schedule.sql`](supabase/reminders-schedule.sql), fill in your app URL and `CRON_SECRET`,
+   and run it in the SQL Editor. Don't commit the filled-in copy.
+5. On the iPhone, open the app **from the home-screen icon**, go to Profile → Reminders, tap
+   **Turn on notifications**, allow them, then **Send a test**.
+
+### 6. Install on iPhone
 Open the Vercel URL in **Safari**, tap **Share → Add to Home Screen**, then open it from the home screen.
 
 ## Scripts
@@ -71,11 +81,14 @@ src/
     photo-estimate*.ts  Claude vision call + output schema (+ tests)
     analytics.ts      daily totals, adherence, adaptive TDEE, weekly rows (+ tests)
     exercise.ts       activities, calorie estimates, volume, e1RM, lift history (+ tests)
+    push.ts           web push sending (VAPID) for reminders
     mood.ts           daily mood, sleep/calorie/exercise comparisons, tag stats (+ tests)
     trend.ts          smoothed weight trend + weekly rate (+ tests)
     today.ts          "today" in the user's time zone (tz cookie)
     profile.ts        loads profile + latest weight, computes the target
     supabase/         browser, server and proxy clients
   proxy.ts            refreshes the session and redirects signed-out visitors
+  app/api/reminders/  receives due reminders from the Supabase schedule and sends pushes
+public/sw.js          service worker: offline page copies, push notifications
 supabase/migrations/  database schema (SQL)
 ```
