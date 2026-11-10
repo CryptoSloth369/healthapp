@@ -32,10 +32,11 @@ npm run dev                  # http://localhost:3000
 2. Add the environment variables `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 3. Click Deploy. You'll get a URL like `https://healthapp-xxx.vercel.app`.
 
-### 4. Photo calorie estimator (optional)
+### 4. Photo estimator and AI coach (optional)
 1. Create an API key at <https://platform.claude.com/settings/keys> (add billing credit first).
 2. In Vercel, add `ANTHROPIC_API_KEY` as a **Secret** environment variable, then redeploy.
-Each photo costs roughly 2–5 cents.
+Each photo costs roughly 2–5 cents; each coach question roughly 2–10 cents.
+3. For the coach, also run [`supabase/migrations/0004_assistant.sql`](supabase/migrations/0004_assistant.sql) in the SQL Editor.
 
 ### 5. Reminders (optional)
 1. Run [`supabase/migrations/0003_reminders.sql`](supabase/migrations/0003_reminders.sql) in the SQL Editor if you haven't.
@@ -65,6 +66,7 @@ src/
   app/
     (app)/            signed-in pages with the bottom tab bar
       page.tsx        Today
+      coach/          AI coach chat and saved conversations
       dashboard/      trends: calories, weight, macros, adaptive TDEE, weekly table
       food/           daily food log, add (search/quick picks/manual), photo estimate, edit
       exercise/       workouts (lifting sets, cardio miles), templates
@@ -81,6 +83,7 @@ src/
     photo-estimate*.ts  Claude vision call + output schema (+ tests)
     analytics.ts      daily totals, adherence, adaptive TDEE, weekly rows (+ tests)
     exercise.ts       activities, calorie estimates, volume, e1RM, lift history (+ tests)
+    assistant/        coach: tools over your data, streaming agent loop, display (+ tests)
     push.ts           web push sending (VAPID) for reminders
     mood.ts           daily mood, sleep/calorie/exercise comparisons, tag stats (+ tests)
     trend.ts          smoothed weight trend + weekly rate (+ tests)
@@ -88,6 +91,7 @@ src/
     profile.ts        loads profile + latest weight, computes the target
     supabase/         browser, server and proxy clients
   proxy.ts            refreshes the session and redirects signed-out visitors
+  app/api/assistant/  streams coach answers (newline-delimited JSON)
   app/api/reminders/  receives due reminders from the Supabase schedule and sends pushes
 public/sw.js          service worker: offline page copies, push notifications
 supabase/migrations/  database schema (SQL)

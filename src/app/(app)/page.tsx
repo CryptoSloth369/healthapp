@@ -35,11 +35,19 @@ export default async function TodayPage() {
           <p className="text-sm text-muted">{formatDay(today, { weekday: "long", month: "long", day: "numeric" })}</p>
           <h1 className="text-2xl font-bold">{profile.display_name ? `Hi, ${profile.display_name}` : "Today"}</h1>
         </div>
+        <div className="flex gap-2">
+        <Link href="/coach" className="flex items-center gap-1.5 rounded-full border border-accent/60 px-3 py-1.5 text-sm font-medium text-accent" aria-label="AI coach">
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3zM19 15l.8 1.9 1.9.8-1.9.8L19 20.4l-.8-1.9-1.9-.8 1.9-.8L19 15z" />
+          </svg>
+          Coach
+        </Link>
         <Link href="/profile" className="rounded-full border border-border p-2 text-muted" aria-label="Profile and settings">
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
             <path d="M12 12a4 4 0 100-8 4 4 0 000 8zm-8 9a8 8 0 0116 0" />
           </svg>
         </Link>
+        </div>
       </header>
 
       <QuickWeighIn

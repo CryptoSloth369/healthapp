@@ -128,3 +128,18 @@ export async function getEntriesBetween(start: string, end: string) {
     fat_g: num(e.fat_g),
   }));
 }
+
+/** Full entries for a date range (inclusive), oldest first. */
+export async function getEntriesDetailed(start: string, end: string): Promise<FoodEntry[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("food_entry")
+    .select(ENTRY_COLS)
+    .gte("eaten_on", start)
+    .lte("eaten_on", end)
+    .order("eaten_on")
+    .order("eaten_at")
+    .limit(3000)
+    .overrideTypes<FoodEntry[], { merge: false }>();
+  return (data ?? []).map(normalize);
+}

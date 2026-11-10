@@ -141,6 +141,14 @@ export function DashboardView({
         </nav>
       </header>
 
+      <Link href="/coach" className="flex items-center justify-between rounded-2xl border border-accent/50 bg-surface px-4 py-3">
+        <span>
+          <span className="block font-semibold">Ask the coach</span>
+          <span className="block text-sm text-muted">Get an analysis or a plan from these numbers</span>
+        </span>
+        <span className="text-accent">→</span>
+      </Link>
+
       <section className="grid grid-cols-2 gap-3">
         <Tile
           label="Avg intake"
