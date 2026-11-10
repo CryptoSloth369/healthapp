@@ -91,7 +91,7 @@ make this useful instead of misleading. Cost is roughly a cent or two per photo.
 | 2 ✅ | **Weight log**: quick weigh-in on Today, history with edit/delete, chart with smoothed trend + goal line, weekly rate |
 | 3 ✅ | **Calorie logging**: entries by meal with macros and servings, daily totals vs target, saved + recent foods for one-tap re-logging, edit/delete |
 | 4 ✅ | **Dashboard v1**: 4W/12W/6M ranges, intake + adherence + trend + streak tiles, calories chart vs target, weight trend, average macros, adaptive TDEE with one-tap target update, weekly table |
-| 5 | **Photo estimator**: upload, Claude vision, review screen |
+| 5 ✅ | **Photo estimator**: phone photo (resized to 1280px), optional note, Claude vision with schema-checked JSON, editable review with per-item amounts, photo kept privately with the entries |
 | 6 | **Mood tracker** + mood views on the dashboard |
 | 7 | **Exercise log**: design the specifics together, then build |
 | 8 | PWA polish: installable, offline-tolerant entry, reminders |

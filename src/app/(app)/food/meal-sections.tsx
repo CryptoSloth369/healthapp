@@ -21,7 +21,14 @@ export function MealSections({ entries, day }: { entries: FoodEntry[]; day: stri
                     <li key={e.id}>
                       <Link href={`/food/edit/${e.id}`} className="flex items-center justify-between gap-3 py-2.5">
                         <span className="min-w-0">
-                          <span className="block truncate">{e.name}</span>
+                          <span className="block truncate">
+                            {e.name}
+                            {e.source === "photo" && (
+                              <span className="ml-1.5 text-xs text-muted" title="Estimated from a photo" aria-label="Estimated from a photo">
+                                📷
+                              </span>
+                            )}
+                          </span>
                           <span className="block truncate text-xs text-muted">
                             {[servingText(e.servings, e.serving), macroLine(e)].filter(Boolean).join(" · ")}
                           </span>

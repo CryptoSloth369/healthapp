@@ -31,7 +31,12 @@ npm run dev                  # http://localhost:3000
 2. Add the environment variables `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 3. Click Deploy. You'll get a URL like `https://healthapp-xxx.vercel.app`.
 
-### 4. Install on iPhone
+### 4. Photo calorie estimator (optional)
+1. Create an API key at <https://platform.claude.com/settings/keys> (add billing credit first).
+2. In Vercel, add `ANTHROPIC_API_KEY` as a **Secret** environment variable, then redeploy.
+Each photo costs roughly 2–5 cents.
+
+### 5. Install on iPhone
 Open the Vercel URL in **Safari**, tap **Share → Add to Home Screen**, then open it from the home screen.
 
 ## Scripts
@@ -50,7 +55,7 @@ src/
     (app)/            signed-in pages with the bottom tab bar
       page.tsx        Today
       dashboard/      trends: calories, weight, macros, adaptive TDEE, weekly table
-      food/           daily food log, add (search/quick picks/manual), edit
+      food/           daily food log, add (search/quick picks/manual), photo estimate, edit
       weight/         weigh-ins: log, chart, history
       profile/        body stats, goal, calorie target, change password
     login/            sign-in page + auth server actions
@@ -60,6 +65,7 @@ src/
     tdee.ts           BMR / TDEE / goal-based calorie target (+ tests)
     nutrition.ts      meal helpers, totals, per-serving scaling (+ tests)
     food.ts           food log + quick-pick queries
+    photo-estimate*.ts  Claude vision call + output schema (+ tests)
     analytics.ts      daily totals, adherence, adaptive TDEE, weekly rows (+ tests)
     trend.ts          smoothed weight trend + weekly rate (+ tests)
     today.ts          "today" in the user's time zone (tz cookie)

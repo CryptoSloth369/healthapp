@@ -29,6 +29,19 @@ export default async function AddFoodPage({
           Cancel
         </Link>
       </header>
+      <Link
+        href={`/food/photo?day=${day}${meal ? `&meal=${meal}` : ""}`}
+        className="flex items-center gap-3 rounded-2xl border border-accent/40 bg-surface p-4"
+      >
+        <svg viewBox="0 0 24 24" className="h-7 w-7 shrink-0 text-accent" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+          <path d="M3 8a2 2 0 012-2h2l1.5-2h7L17 6h2a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+        <span>
+          <span className="block font-semibold">Estimate from a photo</span>
+          <span className="block text-sm text-muted">Snap your meal, then review the AI estimate</span>
+        </span>
+      </Link>
       <AddFood day={day} meal={meal} picks={picks} />
     </div>
   );

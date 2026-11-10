@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { perServing } from "@/lib/nutrition";
 import type { FoodEntry, SavedFood } from "@/lib/types";
 
-const ENTRY_COLS = "id, eaten_on, meal, name, servings, serving, kcal, protein_g, carbs_g, fat_g, source, saved_food_id, note";
+const ENTRY_COLS =
+  "id, eaten_on, meal, name, servings, serving, kcal, protein_g, carbs_g, fat_g, source, saved_food_id, photo_path, ai_confidence, note";
 
 function num(v: unknown): number | null {
   return v == null ? null : Number(v);
@@ -16,7 +17,15 @@ function normalize(e: FoodEntry): FoodEntry {
     protein_g: num(e.protein_g),
     carbs_g: num(e.carbs_g),
     fat_g: num(e.fat_g),
+    ai_confidence: num(e.ai_confidence),
   };
+}
+
+/** Short-lived link to a private meal photo. */
+export async function getPhotoUrl(path: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.storage.from("meal-photos").createSignedUrl(path, 60 * 60);
+  return data?.signedUrl ?? null;
 }
 
 export async function getDayEntries(day: string): Promise<FoodEntry[]> {

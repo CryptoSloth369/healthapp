@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getEntry } from "@/lib/food";
+import { getEntry, getPhotoUrl } from "@/lib/food";
 import { formatDay } from "@/lib/dates";
 import { perServing } from "@/lib/nutrition";
 import { card } from "@/components/ui";
@@ -13,6 +13,7 @@ export default async function EditFoodPage({ params }: { params: Promise<{ id: s
   const entry = await getEntry(Number(id));
   if (!entry) notFound();
   const per = perServing(entry, entry.servings);
+  const photoUrl = entry.photo_path ? await getPhotoUrl(entry.photo_path) : null;
 
   return (
     <div className="space-y-4">
@@ -25,6 +26,19 @@ export default async function EditFoodPage({ params }: { params: Promise<{ id: s
           Cancel
         </Link>
       </header>
+      {(photoUrl || entry.source === "photo") && (
+        <section className={`${card} space-y-2`}>
+          {photoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
+            <img src={photoUrl} alt="Meal photo" className="max-h-64 w-full rounded-xl object-cover" />
+          )}
+          <p className="text-xs text-muted">
+            Estimated from a photo
+            {entry.ai_confidence != null &&
+              ` · ${entry.ai_confidence >= 0.85 ? "high" : entry.ai_confidence >= 0.6 ? "medium" : "low"} confidence`}
+          </p>
+        </section>
+      )}
       <section className={card}>
         <EntryForm
           id={entry.id}

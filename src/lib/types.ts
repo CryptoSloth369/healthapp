@@ -35,6 +35,8 @@ export type FoodEntry = {
   fat_g: number | null;
   source: "manual" | "saved" | "photo" | "barcode" | "search";
   saved_food_id: number | null;
+  photo_path: string | null;
+  ai_confidence: number | null;
   note: string | null;
 };
 
