@@ -138,7 +138,7 @@ export function WeightChart({
           className="block touch-pan-y select-none"
           onPointerMove={onPointer}
           onPointerDown={onPointer}
-          onPointerLeave={() => setHover(null)}
+          onPointerLeave={(e) => e.pointerType === "mouse" && setHover(null)}
           role="img"
           aria-label={`Weight chart: ${pts.length} weigh-ins from ${formatDay(pts[0].day)} to ${formatDay(pts[pts.length - 1].day)}, trend now ${pts[pts.length - 1].trend.toFixed(1)} lb`}
         >

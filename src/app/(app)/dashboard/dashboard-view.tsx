@@ -10,6 +10,9 @@ import { Meter } from "@/components/meter";
 import { card } from "@/components/ui";
 import { ApplyTargetButton } from "./apply-target";
 import { MoodHeatmap } from "@/components/mood-heatmap";
+import { LiftProgress } from "@/components/lift-progress";
+import { ACTIVITIES, activityLabel, liftHistory, personalRecords } from "@/lib/exercise";
+import type { ExerciseSession } from "@/lib/types";
 import { calorieSplit, dailyMood, exerciseSplit, MOOD_LABELS, sleepSplit, tagStats, type MoodRow, type Split } from "@/lib/mood";
 
 export const RANGES = { "4w": { days: 28, label: "4W" }, "12w": { days: 84, label: "12W" }, "6m": { days: 182, label: "6M" } } as const;
@@ -24,6 +27,7 @@ export function DashboardView({
   history,
   entries,
   moods,
+  workouts,
 }: {
   range: RangeKey;
   today: string;
@@ -31,6 +35,7 @@ export function DashboardView({
   history: WeightHistory;
   entries: { eaten_on: string; kcal: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[];
   moods: MoodRow[];
+  workouts: ExerciseSession[];
 }) {
   const span = RANGES[range].days;
   const start = addDays(today, -(span - 1));
@@ -71,6 +76,31 @@ export function DashboardView({
           kcal: w.avgKcal,
           label: `Week of ${formatDay(w.weekStart, { month: "short", day: "numeric" })}`,
         }));
+
+  // Exercise over the range.
+  const burnedByDay = new Map<string, number>();
+  for (const w of workouts) burnedByDay.set(w.performed_on, (burnedByDay.get(w.performed_on) ?? 0) + (w.kcal_burned ?? 0));
+  const totalBurned = workouts.reduce((a, w) => a + (w.kcal_burned ?? 0), 0);
+  const totalMinutes = workouts.reduce((a, w) => a + (w.duration_min ?? 0), 0);
+  const byActivity = Object.entries(
+    workouts.reduce<Record<string, { n: number; min: number; mi: number; kcal: number }>>((acc, w) => {
+      const a = (acc[w.activity] ??= { n: 0, min: 0, mi: 0, kcal: 0 });
+      a.n++;
+      a.min += w.duration_min ?? 0;
+      a.mi += w.distance_mi ?? 0;
+      a.kcal += w.kcal_burned ?? 0;
+      return acc;
+    }, {}),
+  ).sort((a, b) => b[1].n - a[1].n);
+  const lifts = liftHistory(workouts.flatMap((w) => w.sets.map((s) => ({ ...s, day: w.performed_on }))));
+  const prs = personalRecords(lifts);
+  // Average daily balance on days with food logged (excluding today): maintenance + exercise − eaten.
+  const maintenance = summary.target?.tdee ?? null;
+  const balanceDays = days.filter((d) => d.logged && d.day !== today);
+  const avgBalance =
+    maintenance != null && balanceDays.length
+      ? Math.round(balanceDays.reduce((a, d) => a + maintenance + (burnedByDay.get(d.day) ?? 0) - d.kcal, 0) / balanceDays.length)
+      : null;
 
   // Mood vs sleep, calories and tags over the range.
   const moodDays = dailyMood(moods.filter((m) => m.logged_on >= start));
@@ -226,6 +256,99 @@ export function DashboardView({
               from your intake and weight trend, which is usually more accurate than the formula.
             </p>
           </>
+        )}
+      </section>
+
+      <section className={`${card} space-y-3`}>
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-semibold">Exercise</h2>
+          <Link href="/exercise" className="text-sm text-accent">
+            Log →
+          </Link>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <p className="text-xs text-muted">Workouts</p>
+            <p className="text-xl font-semibold">{workouts.length}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted">Time</p>
+            <p className="text-xl font-semibold">
+              {Math.round(totalMinutes / 6) / 10}
+              <span className="text-sm font-normal text-muted"> h</span>
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted">Burned</p>
+            <p className="text-xl font-semibold">
+              {totalBurned.toLocaleString()}
+              <span className="text-sm font-normal text-muted"> kcal</span>
+            </p>
+          </div>
+        </div>
+        {avgBalance != null && (
+          <p className="rounded-xl bg-background px-3 py-2 text-sm">
+            Average daily {avgBalance >= 0 ? "deficit" : "surplus"}:{" "}
+            <span className="font-semibold">{Math.abs(avgBalance).toLocaleString()} kcal</span>
+            <span className="block text-xs text-muted">
+              Maintenance estimate + exercise − food, on {balanceDays.length} logged day{balanceDays.length === 1 ? "" : "s"} (≈{" "}
+              {Math.abs(Math.round(((avgBalance * 7) / 3500) * 10) / 10)} lb/week {avgBalance >= 0 ? "loss" : "gain"}).
+            </span>
+          </p>
+        )}
+        {byActivity.length > 0 && (
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs text-muted">
+              <tr>
+                <th className="py-1 font-normal">Activity</th>
+                <th className="py-1 text-right font-normal">Sessions</th>
+                <th className="py-1 text-right font-normal">Time</th>
+                <th className="py-1 text-right font-normal">kcal</th>
+              </tr>
+            </thead>
+            <tbody className="tabular-nums">
+              {byActivity.map(([a, v]) => (
+                <tr key={a} className="border-t border-border">
+                  <td className="py-1.5">
+                    {activityLabel(a)}
+                    {a in ACTIVITIES && ACTIVITIES[a as keyof typeof ACTIVITIES].distance && v.mi > 0 && (
+                      <span className="text-xs text-muted"> · {Math.round(v.mi * 10) / 10} mi</span>
+                    )}
+                  </td>
+                  <td className="py-1.5 text-right">{v.n}</td>
+                  <td className="py-1.5 text-right text-muted">{v.min} min</td>
+                  <td className="py-1.5 text-right">{v.kcal.toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        <div className="space-y-2 border-t border-border pt-3">
+          <h3 className="text-sm font-semibold">Lift progress</h3>
+          <LiftProgress history={lifts} />
+        </div>
+        {prs.length > 0 && (
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs text-muted">
+              <tr>
+                <th className="py-1 font-normal">Best in range</th>
+                <th className="py-1 text-right font-normal">Top weight</th>
+                <th className="py-1 text-right font-normal">Est. 1RM</th>
+                <th className="py-1 text-right font-normal">Last</th>
+              </tr>
+            </thead>
+            <tbody className="tabular-nums">
+              {prs.map((p) => (
+                <tr key={p.exercise} className="border-t border-border">
+                  <td className="py-1.5">{p.exercise}</td>
+                  <td className="py-1.5 text-right">{p.topWeight == null ? "BW" : `${p.topWeight}`}</td>
+                  <td className="py-1.5 text-right">{p.bestE1rm == null ? "—" : Math.round(p.bestE1rm)}</td>
+                  <td className="py-1.5 text-right text-muted">{formatDay(p.lastDay, { month: "short", day: "numeric" })}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </section>
 

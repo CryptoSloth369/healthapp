@@ -63,7 +63,7 @@ export function CalorieChart({ bars, target, unit }: { bars: CalorieBar[]; targe
           const i = Math.floor((e.clientX - r.left - M.left) / g.slot);
           setHover(i >= 0 && i < bars.length ? i : null);
         }}
-        onPointerLeave={() => setHover(null)}
+        onPointerLeave={(e) => e.pointerType === "mouse" && setHover(null)}
       >
         {g.ticks.map((t) => (
           <g key={t}>

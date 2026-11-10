@@ -4,6 +4,8 @@ import { getProfileSummary } from "@/lib/profile";
 import { getWeightHistory } from "@/lib/weight";
 import { getDayEntries } from "@/lib/food";
 import { getMoodEntries } from "@/lib/mood-data";
+import { getSessions } from "@/lib/exercise-data";
+import { activityLabel } from "@/lib/exercise";
 import { QuickMood } from "@/components/quick-mood";
 import { sumNutrients } from "@/lib/nutrition";
 import { CalorieSummary } from "@/components/calorie-summary";
@@ -14,11 +16,12 @@ import { button, card } from "@/components/ui";
 
 export default async function TodayPage() {
   const today = await todayLocal();
-  const [summary, history, entries, moods] = await Promise.all([
+  const [summary, history, entries, moods, workouts] = await Promise.all([
     getProfileSummary(),
     getWeightHistory(),
     getDayEntries(today),
     getMoodEntries(today, today),
+    getSessions(today, today),
   ]);
   if (!summary) redirect("/login");
   const { profile, missing } = summary;
@@ -46,7 +49,13 @@ export default async function TodayPage() {
         rate={history.rateLbPerWeek}
       />
 
-      <CalorieSummary totals={sumNutrients(entries)} daily={summary.daily} compact>
+      <CalorieSummary
+        totals={sumNutrients(entries)}
+        daily={summary.daily}
+        burned={workouts.reduce((a, w) => a + (w.kcal_burned ?? 0), 0)}
+        maintenance={summary.target?.tdee ?? null}
+        compact
+      >
         <div className="flex items-center justify-between pt-1 text-sm">
           <span className="text-muted">
             {entries.length === 0 ? "Nothing logged yet" : `${entries.length} item${entries.length === 1 ? "" : "s"} logged`}
@@ -62,6 +71,33 @@ export default async function TodayPage() {
         </div>
       </CalorieSummary>
 
+      <section className={`${card} space-y-2`}>
+        <div className="flex items-baseline justify-between">
+          <p className="font-semibold">Exercise</p>
+          <Link href="/exercise/new" className="text-sm font-medium text-accent">
+            + Log workout
+          </Link>
+        </div>
+        {workouts.length === 0 ? (
+          <p className="text-sm text-muted">Nothing logged today.</p>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {workouts.map((w) => (
+              <li key={w.id}>
+                <Link href={`/exercise/${w.id}`} className="flex justify-between gap-3">
+                  <span>
+                    {activityLabel(w.activity)}
+                    {w.duration_min != null && <span className="text-muted"> · {w.duration_min} min</span>}
+                    {w.distance_mi != null && <span className="text-muted"> · {w.distance_mi} mi</span>}
+                  </span>
+                  {w.kcal_burned != null && <span className="tabular-nums text-muted">{w.kcal_burned} kcal</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <QuickMood today={today} latest={moods[0] ? { mood: moods[0].mood, at: moods[0].logged_at } : null} />
 
       {missing.length > 0 && (
@@ -76,7 +112,6 @@ export default async function TodayPage() {
         </section>
       )}
 
-      <p className="text-center text-xs text-muted">Exercise logging is coming in a later step.</p>
     </div>
   );
 }

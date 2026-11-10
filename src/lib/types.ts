@@ -63,3 +63,31 @@ export type MoodEntry = {
   tags: string[];
   note: string | null;
 };
+
+export type ExerciseSet = { id?: number; position: number; exercise: string; weight_lb: number | null; reps: number };
+
+export type ExerciseSession = {
+  id: number;
+  performed_on: string;
+  performed_at: string;
+  activity: string;
+  duration_min: number | null;
+  distance_mi: number | null;
+  kcal_burned: number | null;
+  kcal_estimated: boolean;
+  template_id: number | null;
+  note: string | null;
+  sets: ExerciseSet[];
+};
+
+export type TemplateExercise = { id?: number; position: number; exercise: string; sets: number; reps: number | null; weight_lb: number | null };
+
+export type WorkoutTemplate = {
+  id: number;
+  name: string;
+  activity: string;
+  duration_min: number | null;
+  distance_mi: number | null;
+  note: string | null;
+  exercises: TemplateExercise[];
+};

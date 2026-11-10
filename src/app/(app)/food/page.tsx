@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getProfileSummary } from "@/lib/profile";
 import { getDayEntries } from "@/lib/food";
+import { getBurnedByDay } from "@/lib/exercise-data";
 import { todayLocal } from "@/lib/today";
 import { addDays, formatDay, isDay } from "@/lib/dates";
 import { sumNutrients } from "@/lib/nutrition";
@@ -11,7 +12,7 @@ import { CalorieSummary } from "@/components/calorie-summary";
 export default async function FoodPage({ searchParams }: { searchParams: Promise<{ day?: string }> }) {
   const [{ day: dayParam }, today] = await Promise.all([searchParams, todayLocal()]);
   const day = isDay(dayParam) && dayParam <= today ? dayParam : today;
-  const [summary, entries] = await Promise.all([getProfileSummary(), getDayEntries(day)]);
+  const [summary, entries, burnedByDay] = await Promise.all([getProfileSummary(), getDayEntries(day), getBurnedByDay(day, day)]);
   if (!summary) redirect("/login");
 
   const totals = sumNutrients(entries);
@@ -40,7 +41,12 @@ export default async function FoodPage({ searchParams }: { searchParams: Promise
         </nav>
       </header>
 
-      <CalorieSummary totals={totals} daily={summary.daily} />
+      <CalorieSummary
+        totals={totals}
+        daily={summary.daily}
+        burned={burnedByDay.get(day) ?? 0}
+        maintenance={summary.target?.tdee ?? null}
+      />
 
       <MealSections entries={entries} day={day} />
     </div>

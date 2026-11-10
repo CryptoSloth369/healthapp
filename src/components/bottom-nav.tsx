@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/", label: "Today", icon: "M3 12l9-8 9 8M5 10v10h14V10" },
   { href: "/food", label: "Food", icon: "M7 3v8a2 2 0 002 2v8M11 3v6M5 3v6a2 2 0 002 2M17 3c-1.7 0-3 2.2-3 5s1.3 4 3 4v9" },
+  { href: "/exercise", label: "Exercise", icon: "M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12" },
   { href: "/weight", label: "Weight", icon: "M3 17l6-6 4 4 8-8M15 7h6v6" },
   { href: "/mood", label: "Mood", icon: "M12 21a9 9 0 100-18 9 9 0 000 18zM8.5 14.5s1.3 2 3.5 2 3.5-2 3.5-2M9 9.5h.01M15 9.5h.01" },
   { href: "/dashboard", label: "Trends", icon: "M4 20V10M10 20V4M16 20v-7M22 20H2" },

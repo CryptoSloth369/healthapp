@@ -12,6 +12,7 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the architecture and roadmap.
 1. Create a free project at <https://supabase.com/dashboard>. Save the database password somewhere safe.
 2. **Create the tables:** open **SQL Editor → New query**, paste all of
    [`supabase/migrations/0001_initial_schema.sql`](supabase/migrations/0001_initial_schema.sql), and click **Run**.
+   Then do the same for each later file in `supabase/migrations/`, in order (`0002_exercise.sql`, …). Run each file once.
 3. **Create your login:** go to **Authentication → Users → Add user → Create new user**, enter your
    email and a password, and tick **Auto Confirm User**.
 4. **Turn off public sign-ups** so nobody else can make an account: **Authentication → Sign In / Providers**,
@@ -56,6 +57,7 @@ src/
       page.tsx        Today
       dashboard/      trends: calories, weight, macros, adaptive TDEE, weekly table
       food/           daily food log, add (search/quick picks/manual), photo estimate, edit
+      exercise/       workouts (lifting sets, cardio miles), templates
       mood/           mood check-ins, heatmap, history
       weight/         weigh-ins: log, chart, history
       profile/        body stats, goal, calorie target, change password
@@ -68,6 +70,7 @@ src/
     food.ts           food log + quick-pick queries
     photo-estimate*.ts  Claude vision call + output schema (+ tests)
     analytics.ts      daily totals, adherence, adaptive TDEE, weekly rows (+ tests)
+    exercise.ts       activities, calorie estimates, volume, e1RM, lift history (+ tests)
     mood.ts           daily mood, sleep/calorie/exercise comparisons, tag stats (+ tests)
     trend.ts          smoothed weight trend + weekly rate (+ tests)
     today.ts          "today" in the user's time zone (tz cookie)
