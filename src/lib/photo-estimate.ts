@@ -1,5 +1,6 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import { apiErrorReason } from "@/lib/api-error";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { normalizeEstimate, PhotoEstimateSchema, type PhotoEstimate } from "./photo-estimate-schema";
 
@@ -57,7 +58,9 @@ export async function estimateFromPhoto(input: {
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError) throw new EstimateError("The Anthropic API key was rejected. Check ANTHROPIC_API_KEY in Vercel.");
     if (err instanceof Anthropic.RateLimitError) throw new EstimateError("Too many requests right now. Try again in a minute.");
-    if (err instanceof Anthropic.BadRequestError) throw new EstimateError(`The photo couldn't be processed: ${err.message}`);
+    if (err instanceof Anthropic.APIError) console.error("photo estimate API error", err.status, err.requestID, JSON.stringify(err.error));
+    if (err instanceof Anthropic.BadRequestError)
+      throw new EstimateError(`The photo couldn't be processed: ${apiErrorReason(err.error) ?? `error ${err.status}`}`);
     if (err instanceof Anthropic.APIError) throw new EstimateError(`The estimator is unavailable (error ${err.status}). Try again shortly.`);
     throw err;
   }

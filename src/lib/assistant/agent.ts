@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { apiTools, PROPOSAL_TOOLS, runTool } from "./tools";
+import { apiErrorReason } from "@/lib/api-error";
 
 const MODEL = "claude-opus-5-5";
 const MAX_TOOL_ROUNDS = 10;
@@ -137,9 +138,16 @@ export async function* runAgent(opts: {
       }
       message = await stream.finalMessage();
     } catch (err) {
+      if (err instanceof Anthropic.APIError) {
+        // Shows up in Vercel → Functions logs; the request id helps Anthropic support.
+        console.error("coach API error", err.status, err.requestID, JSON.stringify(err.error));
+      }
       if (err instanceof Anthropic.RateLimitError) yield { type: "error", message: "Too many requests right now. Try again in a minute." };
       else if (err instanceof Anthropic.AuthenticationError) yield { type: "error", message: "The Anthropic API key was rejected." };
-      else if (err instanceof Anthropic.APIError) yield { type: "error", message: `The coach is unavailable (error ${err.status}).` };
+      else if (err instanceof Anthropic.APIError) {
+        const reason = apiErrorReason(err.error);
+        yield { type: "error", message: `The coach is unavailable (error ${err.status})${reason ? `: ${reason}` : "."}` };
+      }
       else yield { type: "error", message: "Something went wrong. Try again." };
       return;
     }

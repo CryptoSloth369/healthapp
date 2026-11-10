@@ -72,7 +72,7 @@ function sse(blocks: Record<string, unknown>[], stop: string) {
   out += ev("message_stop", {});
   return out;
 }
-const script = [
+const script: (string | { status: number; body: unknown })[] = [
   sse([{ type: "thinking", thinking: "Checking your profile first." }, { type: "tool_use", id: "tu_1", name: "get_profile_and_goals", input: {} }], "tool_use"),
   sse([{ type: "text", text: "Your target is **2,200 kcal**. I'd lower it slightly." }, { type: "tool_use", id: "tu_2", name: "propose_calorie_target", input: { kcal: 2100, reason: "Trend is flat." } }], "tool_use"),
   sse([{ type: "text", text: "Tap Apply if you agree." }], "end_turn"),
@@ -85,8 +85,14 @@ beforeAll(async () => {
     req.on("data", (c) => (body += c));
     req.on("end", () => {
       requests.push({ ...JSON.parse(body), _beta: req.headers["anthropic-beta"] });
-      res.writeHead(200, { "content-type": "text/event-stream" });
-      res.end(script[requests.length - 1]);
+      const reply = script[requests.length - 1];
+      if (typeof reply === "string") {
+        res.writeHead(200, { "content-type": "text/event-stream" });
+        res.end(reply);
+      } else {
+        res.writeHead(reply.status, { "content-type": "application/json", "request-id": "req_test" });
+        res.end(JSON.stringify(reply.body));
+      }
     });
   });
   await new Promise<void>((r) => server.listen(0, r));
@@ -137,5 +143,19 @@ describe("runAgent", () => {
     expect(stored).toEqual(["user", "assistant", "user", "assistant", "user", "assistant"]);
     expect(db.assistant_message.map((m) => m.seq)).toEqual([0, 1, 2, 3, 4, 5]);
     expect(db.assistant_conversation[0].title).toBe("Is my target right?");
+  });
+
+  it("shows the API's reason when a request is rejected", async () => {
+    script.push({ status: 400, body: { type: "error", error: { type: "invalid_request_error", message: "Your credit balance is too low to access the Anthropic API." } } });
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { runAgent } = await import("./agent");
+    const events = [];
+    for await (const e of runAgent({ conversationId: null, userText: "Hi", today: "2026-11-10", timezone: "America/New_York" })) events.push(e);
+    expect(events.at(-1)).toEqual({
+      type: "error",
+      message: "The coach is unavailable (error 400): Your credit balance is too low to access the Anthropic API.",
+    });
+    expect(errors).toHaveBeenCalledWith("coach API error", 400, "req_test", expect.stringContaining("credit balance"));
+    errors.mockRestore();
   });
 });
