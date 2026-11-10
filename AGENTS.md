@@ -1,3 +1,8 @@
+# Agent instructions
+
+Project docs for AI agents: read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then [`CLAUDE.md`](CLAUDE.md)
+(rules, commands, conventions; it applies to any agent, not just Claude) and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
