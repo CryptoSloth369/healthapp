@@ -6,6 +6,7 @@ import { mealForHour, type Meal } from "@/lib/nutrition";
 import { card, input } from "@/components/ui";
 import { EntryForm, type EntryDraft } from "../entry-form";
 import { deleteSavedFood } from "../actions";
+import { FoodDbSearch } from "../search/food-db-search";
 
 export function AddFood({ day, meal, picks }: { day: string; meal: Meal | null; picks: QuickPick[] }) {
   const [query, setQuery] = useState("");
@@ -23,6 +24,12 @@ export function AddFood({ day, meal, picks }: { day: string; meal: Meal | null; 
       .filter((p) => !q || p.name.toLowerCase().includes(q))
       .slice(0, q ? 50 : 15);
   }, [picks, query, removed]);
+
+  function applyDraft(d: EntryDraft) {
+    setDraft(d);
+    setFormKey((k) => k + 1);
+    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
 
   function choose(p: QuickPick) {
     setDraft({
@@ -91,6 +98,8 @@ export function AddFood({ day, meal, picks }: { day: string; meal: Meal | null; 
           <p className="text-xs text-muted">★ = saved in My foods. Tap a food to log it.</p>
         </section>
       )}
+
+      <FoodDbSearch initialQuery="" onPick={applyDraft} />
 
       <section ref={formRef} className={`${card} scroll-mt-4 space-y-3`}>
         <div className="flex items-center justify-between">

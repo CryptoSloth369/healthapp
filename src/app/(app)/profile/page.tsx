@@ -5,6 +5,7 @@ import { ProfileForm } from "./profile-form";
 import { PasswordForm } from "./password-form";
 import { RemindersCard } from "./reminders-card";
 import { SignOutButton } from "./sign-out-button";
+import { ExportCard } from "./export-card";
 import { getReminderPrefs } from "@/lib/reminders";
 
 export default async function ProfilePage() {
@@ -18,6 +19,7 @@ export default async function ProfilePage() {
       {target && <TargetCard target={target} override={profile.kcal_target_override} />}
       <ProfileForm profile={profile} currentWeight={latestWeight ? Number(latestWeight.weight_lb) : null} />
       <RemindersCard prefs={reminders.prefs} devices={reminders.devices} />
+      <ExportCard />
       <PasswordForm />
       <SignOutButton />
     </div>

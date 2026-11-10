@@ -96,7 +96,7 @@ make this useful instead of misleading. Cost is roughly a cent or two per photo.
 | 7 ✅ | **Exercise log**: weightlifting (exercise, weight × reps per set, volume), swimming, walking/running (miles, pace), jiu-jitsu; time and calories (entered or estimated from MET × weight); burned calories added to the daily budget with deficit/surplus; custom templates; lift progress charts (est. 1RM, top weight, volume) and bests on the dashboard |
 | 8 ✅ | **Phone polish**: service worker (offline copies of visited pages, offline fallback), offline banner with automatic retry of saves, push reminders (weigh-in, dinner, mood) scheduled by Supabase pg_cron that only fire when not yet logged |
 | 9 ✅ | **AI coach**: chat that reads the user's logs through tools (profile/goals, daily summary, food log, workouts, lift progress, mood, energy balance, templates), streams answers with progress updates, saves conversations, and suggests calorie targets or workout templates as cards the user must approve |
-| 10 | Extras: barcode scan (Open Food Facts), USDA food search, CSV export, Apple Health / Health Connect import (via an Expo shell if needed) |
+| 10 ✅ | **Extras**: USDA FoodData Central search (generic + branded), barcode scanning (camera, photo or typed; Open Food Facts then USDA), CSV export per dataset and a full JSON backup |
 
 ## Decisions
 - **Phone:** iPhone. The app is installed as a PWA from Safari ("Add to Home Screen").

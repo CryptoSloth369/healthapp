@@ -38,6 +38,11 @@ npm run dev                  # http://localhost:3000
 Each photo costs roughly 2–5 cents; each coach question roughly 2–10 cents.
 3. For the coach, also run [`supabase/migrations/0004_assistant.sql`](supabase/migrations/0004_assistant.sql) in the SQL Editor.
 
+### Food database search (optional but recommended)
+Search works out of the box with USDA's shared `DEMO_KEY`, which is heavily rate-limited. Get a free personal key at
+<https://fdc.nal.usda.gov/api-key-signup> (instant, email only) and add it in Vercel as `USDA_API_KEY` (Secret), then redeploy.
+Barcode lookups use Open Food Facts (no key) and fall back to USDA.
+
 ### 5. Reminders (optional)
 1. Run [`supabase/migrations/0003_reminders.sql`](supabase/migrations/0003_reminders.sql) in the SQL Editor if you haven't.
 2. In the app, open **Profile → Reminders: one-time setup → Generate keys**. Add the three values to Vercel
@@ -80,6 +85,8 @@ src/
     tdee.ts           BMR / TDEE / goal-based calorie target (+ tests)
     nutrition.ts      meal helpers, totals, per-serving scaling (+ tests)
     food.ts           food log + quick-pick queries
+    food-db.ts        USDA / Open Food Facts parsing, barcodes (+ tests)
+    csv.ts            CSV writer for exports (+ tests)
     photo-estimate*.ts  Claude vision call + output schema (+ tests)
     analytics.ts      daily totals, adherence, adaptive TDEE, weekly rows (+ tests)
     exercise.ts       activities, calorie estimates, volume, e1RM, lift history (+ tests)
@@ -92,6 +99,7 @@ src/
     supabase/         browser, server and proxy clients
   proxy.ts            refreshes the session and redirects signed-out visitors
   app/api/assistant/  streams coach answers (newline-delimited JSON)
+  app/api/export/     CSV per dataset and a full JSON backup
   app/api/reminders/  receives due reminders from the Supabase schedule and sends pushes
 public/sw.js          service worker: offline page copies, push notifications
 supabase/migrations/  database schema (SQL)
