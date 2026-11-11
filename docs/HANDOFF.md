@@ -14,7 +14,7 @@ All ten planned steps are built and merged to `main`, which Vercel deploys to pr
 | Food log, saved foods, photo estimate, USDA search, barcode scan | Done |
 | Exercise log (lifting sets, cardio miles, templates), lift progress | Done |
 | Mood tracker + insights | Done |
-| Journal (Mood tab → Journal) with dictation; coach can read it | Built on branch; needs migration `0005` and a check on the iPhone |
+| Journal (Mood tab → Journal) with dictation; coach can read it | Done, deployed 2026-11-11 (migration `0005` applied) |
 | Dashboard (Trends) incl. adaptive TDEE | Done |
 | Offline mode + push reminders | Done |
 | AI coach (chat over your data, approval-gated suggestions) | Done |
