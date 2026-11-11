@@ -15,6 +15,7 @@ const DATASETS = {
   },
   "exercise-sets": { table: "exercise_set", order: "entry_id", columns: ["entry_id", "position", "exercise", "weight_lb", "reps"] },
   mood: { table: "mood_entry", order: "logged_at", columns: ["logged_on", "logged_at", "mood", "energy", "stress", "sleep_hours", "tags", "note"] },
+  journal: { table: "journal_entry", order: "written_at", columns: ["written_on", "written_at", "updated_at", "body"] },
 } as const;
 type Dataset = keyof typeof DATASETS;
 

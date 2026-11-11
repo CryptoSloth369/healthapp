@@ -2,7 +2,7 @@
 
 The fastest way for a new person or AI agent to pick up this project. Read this, then [`CLAUDE.md`](../CLAUDE.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-_Last updated: 2026-11-10, after the coach's first real use._
+_Last updated: 2026-11-11, after adding the journal._
 
 ## Where things stand
 All ten planned steps are built and merged to `main`, which Vercel deploys to production. See [`ROADMAP.md`](ROADMAP.md).
@@ -14,6 +14,7 @@ All ten planned steps are built and merged to `main`, which Vercel deploys to pr
 | Food log, saved foods, photo estimate, USDA search, barcode scan | Done |
 | Exercise log (lifting sets, cardio miles, templates), lift progress | Done |
 | Mood tracker + insights | Done |
+| Journal (Mood tab → Journal) with dictation; coach can read it | Built on branch; needs migration `0005` and a check on the iPhone |
 | Dashboard (Trends) incl. adaptive TDEE | Done |
 | Offline mode + push reminders | Done |
 | AI coach (chat over your data, approval-gated suggestions) | Done |
@@ -28,13 +29,14 @@ Everything has unit tests (`npm test`) and was exercised in a headless iPhone-si
 - [ ] **Push reminders on the iPhone**, end to end with the `pg_cron` schedule.
 - [ ] **Barcode camera on the iPhone**. Tested in Chromium with a simulated camera and a decoded test image.
 - [ ] **Exports** against real Supabase data.
+- [ ] **Journal dictation on the iPhone**, both in Safari and from the home-screen app. It uses the browser's speech recognition; Chromium was tested with a simulated recognizer. If the button says dictation isn't allowed, the keyboard mic still works.
 
 When one of these misbehaves, the useful evidence is a screenshot plus, for server issues, Vercel → Deployments → Functions logs. Claude API failures show Anthropic's reason in the app and log the status, request id and error body. For reminders, run the SQL checks in [`supabase/reminders-schedule.sql`](../supabase/reminders-schedule.sql).
 
 ## Production setup checklist (owner's account)
 Tick as done. The full steps are in the [README](../README.md#setup-from-scratch).
 
-- [ ] Supabase migrations run in order: `0001` · `0002` · `0003` · `0004`
+- [ ] Supabase migrations run in order: `0001` · `0002` · `0003` · `0004` · `0005`
 - [ ] User created after `0001`; public sign-ups disabled
 - [ ] Vercel env: Supabase URL + publishable key
 - [x] Vercel env: `ANTHROPIC_API_KEY` (and the Anthropic account has credits; with none, every Claude call fails with a 400)

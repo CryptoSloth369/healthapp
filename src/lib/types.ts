@@ -64,6 +64,14 @@ export type MoodEntry = {
   note: string | null;
 };
 
+export type JournalEntry = {
+  id: number;
+  written_on: string;
+  written_at: string;
+  updated_at: string | null;
+  body: string;
+};
+
 export type ExerciseSet = { id?: number; position: number; exercise: string; weight_lb: number | null; reps: number };
 
 export type ExerciseSession = {

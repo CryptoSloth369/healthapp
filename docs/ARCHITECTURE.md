@@ -37,7 +37,7 @@ src/
       food/                   day view, add (quick picks, DB search, barcode, manual), edit, photo/
       exercise/               session list, new/[id] workout form, templates/
       weight/                 log, chart, history
-      mood/                   check-in form, heatmap, history
+      mood/                   check-in form, heatmap, history; journal/ (entries, dictation)
       dashboard/              Trends (page.tsx loads data; dashboard-view.tsx renders)
       coach/                  chat UI, proposal cards, actions (apply/save/delete)
       profile/                stats/goal form, reminders, export, password, sign out
@@ -54,14 +54,15 @@ src/
     nutrition.ts              meals, totals, per-serving scaling
     exercise.ts               activities/MET, calorie estimate, volume, e1RM, lift history
     mood.ts                   daily mood, sleep/calorie/exercise splits, tag stats
+    journal.ts                text cleanup, dictation joining, paging by day
     food-db.ts                USDA/Open Food Facts parsing, barcodes, form drafts
     csv.ts                    CSV writer (formula-injection safe)
     photo-estimate*.ts        Claude vision call + Zod schema
     assistant/                coach tools, agent loop, display mapping, history
     push.ts, reminders.ts     web push (VAPID) and reminder prefs
-    profile.ts, food.ts, weight.ts, exercise-data.ts, mood-data.ts   data loaders
+    profile.ts, food.ts, weight.ts, exercise-data.ts, mood-data.ts, journal-data.ts   data loaders
 public/sw.js, offline.html    service worker and offline fallback
-supabase/migrations/          0001…0004, applied in order
+supabase/migrations/          0001…0005, applied in order
 supabase/reminders-schedule.sql   pg_cron template (fill in URL + secret, don't commit)
 ```
 
@@ -78,6 +79,7 @@ Every user table has `user_id uuid default auth.uid()` and RLS `user_id = auth.u
 | `exercise_set` | lifting sets | entry_id (cascade), position, exercise, weight_lb (null = bodyweight), reps |
 | `workout_template`, `template_exercise` | templates | exercises with sets/reps/weight |
 | `mood_entry` | check-ins | mood/energy/stress 1–5, sleep_hours, tags[], note; several per day allowed |
+| `journal_entry` | journal | written_on (local day), written_at, updated_at, body (1–20,000 chars); several per day allowed |
 | `push_subscription` | devices for push | endpoint unique |
 | `reminder_pref` | reminder times | local times + timezone + `last_sent` per kind |
 | `assistant_conversation`, `assistant_message` | coach history | messages store API content blocks verbatim (`seq` order) |
@@ -109,6 +111,8 @@ DB function: `public.due_reminders()` (security definer; only the DB owner can e
 3. Store the assistant content (fallback-sanitized), run the tools (Zod-validated, scoped to the user via RLS), store the `tool_result`s, and loop (max 10 rounds).
 4. Events stream to the client as NDJSON: `conversation`, `status`, `text`, `proposal`, `error`, `done`.
 5. `propose_*` tools only render cards. The writes happen in `coach/actions.ts` when the user taps.
+
+**Journal dictation.** `DictationButton` uses the browser's speech recognition (`SpeechRecognition` / `webkitSpeechRecognition`, on-device or Apple's servers; no API key). Results are written live into the textarea after the existing text; `joinSegments` de-duplicates iOS's repeated segments, and recognition restarts after Safari's pause timeout until Stop is tapped. Typing stops it. Without speech recognition the form shows the keyboard-mic tip. Unsaved new entries are kept in `localStorage` (`journal-draft`). The coach reads entries with `get_journal` (max 60 days, entries over 4,000 chars shortened).
 
 **Reminders.** pg_cron runs every 15 minutes. `due_reminders()` returns the due, not-yet-logged reminders (each at most once per day, within 2 h of its time) and marks them handled. `net.http_post` sends them to `/api/reminders` (Bearer `CRON_SECRET`), which sends web pushes with VAPID keys. The service worker shows the notification and opens the matching screen when tapped.
 

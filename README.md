@@ -35,7 +35,8 @@ Accounts: Supabase, Vercel, GitHub; optional Anthropic (photo and coach) and a f
    [`0001_initial_schema.sql`](supabase/migrations/0001_initial_schema.sql) →
    [`0002_exercise.sql`](supabase/migrations/0002_exercise.sql) →
    [`0003_reminders.sql`](supabase/migrations/0003_reminders.sql) →
-   [`0004_assistant.sql`](supabase/migrations/0004_assistant.sql).
+   [`0004_assistant.sql`](supabase/migrations/0004_assistant.sql) →
+   [`0005_journal.sql`](supabase/migrations/0005_journal.sql).
    Paste the file *contents*, not the path. Each should report "Success".
 3. **Authentication → Users → Add user → Create new user:** your email and password, tick **Auto Confirm User**.
    Do this *after* `0001`, which creates your profile row automatically.

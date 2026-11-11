@@ -6,6 +6,7 @@ import { getWeightHistory } from "@/lib/weight";
 import { getEntriesBetween, getEntriesDetailed } from "@/lib/food";
 import { getSessions, getTemplates } from "@/lib/exercise-data";
 import { getMoodEntries } from "@/lib/mood-data";
+import { getJournalEntries } from "@/lib/journal-data";
 import { adaptiveTdee, dailyTotals, trendOn } from "@/lib/analytics";
 import { dailyMood } from "@/lib/mood";
 import { ACTIVITIES, activityLabel, isActivity, liftHistory, liftKey, personalRecords, volume } from "@/lib/exercise";
@@ -32,6 +33,8 @@ function checkRange(r: { start: string; end: string }, maxDays: number, ctx: Ctx
   if (daysBetween(r.start, end) + 1 > maxDays) throw new Error(`range too long: at most ${maxDays} days`);
   return { start: r.start, end };
 }
+/** Characters of one journal entry sent to the coach. */
+const JOURNAL_ENTRY_LIMIT = 4000;
 const r1 = (v: number | null | undefined) => (v == null ? null : Math.round(v * 10) / 10);
 
 export const TOOLS = [
@@ -67,16 +70,19 @@ export const TOOLS = [
   def({
     name: "get_daily_summary",
     description:
-      "One row per day: food calories and macros (only if food was logged), exercise calories burned, weigh-in and smoothed trend weight, average mood (1-5) and sleep hours. Best tool for trends and patterns. Max 400 days.",
+      "One row per day: food calories and macros (only if food was logged), exercise calories burned, weigh-in and smoothed trend weight, average mood (1-5), sleep hours, and how many journal entries were written. Best tool for trends and patterns. Max 400 days.",
     schema: Range,
     async run(input, ctx) {
       const { start, end } = checkRange(input, 400, ctx);
-      const [food, hist, workouts, moods] = await Promise.all([
+      const [food, hist, workouts, moods, journal] = await Promise.all([
         getEntriesBetween(start, end),
         getWeightHistory(),
         getSessions(start, end),
         getMoodEntries(start, end),
+        getJournalEntries(start, end, 5000),
       ]);
+      const journalCount = new Map<string, number>();
+      for (const j of journal) journalCount.set(j.written_on, (journalCount.get(j.written_on) ?? 0) + 1);
       const days = dailyTotals(food, start, end);
       const weighIns = new Map(hist.points.map((p) => [p.day, p.weight]));
       const burned = new Map<string, number>();
@@ -98,6 +104,7 @@ export const TOOLS = [
             mood: m?.mood,
             sleep_h: m?.sleep ?? undefined,
             mood_tags: m?.tags.length ? m.tags : undefined,
+            journal_entries: journalCount.get(d.day),
           }).filter(([, v]) => v !== undefined),
         );
       });
@@ -179,6 +186,23 @@ export const TOOLS = [
         tags: m.tags,
         note: m.note,
       }));
+    },
+  }),
+  def({
+    name: "get_journal",
+    description:
+      "The user's journal entries (their own words, often dictated) with day and time. Use for questions about mood, stress, sleep, motivation, cravings, setbacks or what was going on in their life. Very long entries are shortened. Max 60 days.",
+    schema: Range,
+    async run(input, ctx) {
+      const { start, end } = checkRange(input, 60, ctx);
+      const rows = await getJournalEntries(start, end, 300);
+      return rows
+        .reverse()
+        .map((j) => ({
+          day: j.written_on,
+          at: j.written_at,
+          text: j.body.length > JOURNAL_ENTRY_LIMIT ? `${j.body.slice(0, JOURNAL_ENTRY_LIMIT)}… [shortened]` : j.body,
+        }));
     },
   }),
   def({

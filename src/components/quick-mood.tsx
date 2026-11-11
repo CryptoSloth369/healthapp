@@ -15,9 +15,14 @@ export function QuickMood({ today, latest }: { today: string; latest: { mood: nu
     <section className={`${card} space-y-3`}>
       <div className="flex items-baseline justify-between">
         <p className="font-semibold">How are you feeling?</p>
-        <Link href="/mood" className="text-sm text-accent">
-          Full check-in →
-        </Link>
+        <span className="flex gap-4 text-sm">
+          <Link href="/mood/journal" className="text-muted">
+            Journal
+          </Link>
+          <Link href="/mood" className="text-accent">
+            Full check-in →
+          </Link>
+        </span>
       </div>
       <div className="grid grid-cols-5 gap-1.5">
         {[1, 2, 3, 4, 5].map((v) => (

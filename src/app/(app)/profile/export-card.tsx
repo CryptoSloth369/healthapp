@@ -6,6 +6,7 @@ const ITEMS = [
   ["exercise", "Workouts"],
   ["exercise-sets", "Lifting sets"],
   ["mood", "Mood check-ins"],
+  ["journal", "Journal"],
 ] as const;
 
 export function ExportCard() {

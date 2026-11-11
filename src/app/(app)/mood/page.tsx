@@ -7,6 +7,7 @@ import { MoodHeatmap } from "@/components/mood-heatmap";
 import { card } from "@/components/ui";
 import { MoodForm } from "./mood-form";
 import { MoodHistory } from "./mood-history";
+import { MoodTabs } from "./mood-tabs";
 
 export default async function MoodPage({ searchParams }: { searchParams: Promise<{ edit?: string; saved?: string }> }) {
   const [params, today] = await Promise.all([searchParams, todayLocal()]);
@@ -23,6 +24,7 @@ export default async function MoodPage({ searchParams }: { searchParams: Promise
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Mood</h1>
+      <MoodTabs active="checkin" />
 
       <section className={`${card} space-y-3`}>
         <div className="flex items-baseline justify-between">
