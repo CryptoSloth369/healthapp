@@ -55,7 +55,7 @@ Tick as done. The full steps are in the [README](../README.md#setup-from-scratch
 Nothing is in progress. Candidates, in no particular order:
 - Weekly coach review: an auto-generated summary each Sunday (could reuse the reminders schedule plus a coach run).
 - Progress photos (private storage, side-by-side compare).
-- Apple Health import if the owner gets a tracker. That needs a native shell (Expo) or a manual export import.
+- Apple Health / wearable import and selling the app: researched and written up in [`ROADMAP.md`](ROADMAP.md) (long-term sections); not planned soon.
 - Coach: per-message cost display, a "regenerate" button, and letting it log food from a description.
 - Copy yesterday's meals; meal templates; water tracking.
 - Units setting (kg) if ever needed. Storage is lb/in today.
