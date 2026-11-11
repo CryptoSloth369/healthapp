@@ -29,7 +29,7 @@ Everything has unit tests (`npm test`) and was exercised in a headless iPhone-si
 - [ ] **Push reminders on the iPhone**, end to end with the `pg_cron` schedule.
 - [ ] **Barcode camera on the iPhone**. Tested in Chromium with a simulated camera and a decoded test image.
 - [ ] **Exports** against real Supabase data.
-- [ ] **Journal dictation on the iPhone**, both in Safari and from the home-screen app. It uses the browser's speech recognition; Chromium was tested with a simulated recognizer. If the button says dictation isn't allowed, the keyboard mic still works.
+- [x] **Journal dictation on the iPhone**, both in Safari and from the home-screen app. It uses the browser's speech recognition; Chromium was tested with a simulated recognizer. If the button says dictation isn't allowed, the keyboard mic still works. Confirmed working on the owner's iPhone 2026-11-11.
 
 When one of these misbehaves, the useful evidence is a screenshot plus, for server issues, Vercel → Deployments → Functions logs. Claude API failures show Anthropic's reason in the app and log the status, request id and error body. For reminders, run the SQL checks in [`supabase/reminders-schedule.sql`](../supabase/reminders-schedule.sql).
 
