@@ -14,6 +14,9 @@
   /* Chart series (validated for color-blind separation on --surface). */
   --series-trend: #3987e5;
   --series-raw: #199e70;
+  /* Energy balance: deficit (blue) vs surplus (orange), validated as a pair on --surface. */
+  --series-deficit: #3987e5;
+  --series-surplus: #d9652f;
   --grid: #262b33;
   /* Mood 1→5, one blue hue (validated ordinal ramp; brighter = better on dark). */
   --mood-1: #184f95;
@@ -42,6 +45,8 @@
     --warn: #b45309;
     --series-trend: #2a78d6;
     --series-raw: #1baf7a;
+    --series-deficit: #2a78d6;
+    --series-surplus: #d0582a;
     --grid: #e6e8ec;
     /* Darker = better on light. */
     --mood-1: #86b6ef;

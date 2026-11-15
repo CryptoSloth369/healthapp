@@ -51,6 +51,7 @@ src/
     tdee.ts                   BMR, TDEE, goal-based target, macros
     trend.ts                  weight EWMA trend, weekly rate
     analytics.ts              daily totals, adherence, adaptive TDEE, weekly rows
+    energy-balance.ts         intake back-calculated from weight on unlogged days, daily deficit/surplus
     nutrition.ts              meals, totals, per-serving scaling
     exercise.ts               activities/MET, calorie estimate, volume, e1RM, lift history
     mood.ts                   daily mood, sleep/calorie/exercise splits, tag stats
@@ -98,6 +99,8 @@ DB function: `public.due_reminders()` (security definer; only the DB owner can e
 **Weight trend** (`trend.ts`). EWMA at 10% per day, gap-aware. The weekly rate is a least-squares slope of the trend over 14 days.
 
 **Adaptive TDEE** (`analytics.ts`). Over the last 28 complete days: average intake − (trend change × 3,500 / days). It needs 70% of days logged and weigh-ins near both ends. The dashboard can apply a suggested target from it.
+
+**Back-calculated intake / deficit & surplus** (`energy-balance.ts`). Computed on the fly (nothing stored). Weigh-ins are grouped into windows at least 7 days long; a weigh-in on day D covers food through D − 1. For each window: food eaten = Σ burn + trend change × 3,500, where burn = formula maintenance at that day's (interpolated) trend weight + logged exercise. Logged days keep their logged kcal; the remainder is spread evenly over the unlogged days (clamped at 0). Every day carries `source: "logged" | "estimated" | null`, and summaries count each separately. Days outside a window (before the first weigh-in, or after the last full window) stay unknown. The dashboard loads food/exercise from the start of the window the range begins in. In charts, logged = solid, estimated = hatched; in text, `≈` marks a value that includes estimates.
 
 **Exercise calories** (`exercise.ts`). The entered value wins. Otherwise MET × kg × hours, using the latest weigh-in on or before the workout date. Walking and running use the ACSM speed equations when miles are given.
 

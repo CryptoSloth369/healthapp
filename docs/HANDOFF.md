@@ -2,7 +2,7 @@
 
 The fastest way for a new person or AI agent to pick up this project. Read this, then [`CLAUDE.md`](../CLAUDE.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-_Last updated: 2026-11-15, after adding the bigger-picture note._
+_Last updated: 2026-11-15, after adding back-calculated intake (deficit & surplus)._
 
 ## Bigger picture
 _Added 2026-11-15._ This health app is the **first part of a larger personal "life app"**. The owner's goal is one app that helps them optimize their life by automating between the physical world and their digital life, and that lets them control as much of their digital life as possible from one place. Which areas come next (and when) isn't decided yet; record them here once it is.
@@ -25,6 +25,7 @@ All ten planned steps are built and merged to `main`, which Vercel deploys to pr
 | Mood tracker + insights | Done |
 | Journal (Mood tab → Journal) with dictation; coach can read it | Done, deployed 2026-11-11 (migration `0005` applied) |
 | Dashboard (Trends) incl. adaptive TDEE | Done |
+| Back-calculated intake + deficit/surplus chart (logged vs. estimated kept separate) | Done, deployed 2026-11-15 (no migration) |
 | Offline mode + push reminders | Done |
 | AI coach (chat over your data, approval-gated suggestions) | Done |
 | CSV / JSON export | Done |
