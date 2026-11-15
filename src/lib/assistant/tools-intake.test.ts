@@ -1,50 +1,71 @@
 import { describe, expect, it, vi } from "vitest";
+import { runEnergyModel } from "@/lib/energy-balance";
+import { runResult, type RunRecord } from "@/lib/energy-store";
 import { computeTrend } from "@/lib/trend";
 
-// Stand-ins for the Supabase loaders the tool reads through.
+// Stand-ins for the Supabase-backed loaders the tools read through.
 vi.mock("server-only", () => ({}));
 const points = computeTrend([
   { day: "2026-01-01", weight: 200 },
-  { day: "2026-01-08", weight: 200 },
+  { day: "2026-01-08", weight: 199 },
 ]);
-vi.mock("@/lib/profile", () => ({
-  getProfileSummary: async () => ({
-    profile: { sex: "male", birth_date: "1996-01-01", height_in: 70, activity_level: "sedentary" },
-    missing: [],
-  }),
-}));
+const model = runEnergyModel({
+  end: "2026-01-08",
+  points,
+  logged: new Map([
+    ["2026-01-02", 2600],
+    ["2026-01-03", 500], // partial
+  ]),
+  exercise: new Map(),
+  maintenance: () => 2000,
+});
+const run: RunRecord = {
+  id: 1,
+  ran_at: "2026-01-09T08:00:00Z",
+  trigger: "stale",
+  model_version: 1,
+  first_day: model.firstDay,
+  last_day: model.lastDay,
+  result: runResult(model, model.days.length),
+};
+const ensureFreshEnergy = vi.fn(async () => ({ latest: run, previous: null, ranNow: true }));
+const getEnergyDays = vi.fn(async (start: string, end: string) => model.days.filter((d) => d.day >= start && d.day <= end));
+vi.mock("@/lib/energy-data", () => ({ ensureFreshEnergy, getEnergyDays }));
 vi.mock("@/lib/weight", () => ({ getWeightHistory: async () => ({ points, rateLbPerWeek: null, entries: [] }) }));
-const getEntriesBetween = vi.fn(async () => [{ eaten_on: "2026-01-02", kcal: 3000, protein_g: null, carbs_g: null, fat_g: null }]);
-vi.mock("@/lib/food", () => ({ getEntriesBetween, getEntriesDetailed: async () => [] }));
-vi.mock("@/lib/exercise-data", () => ({
-  getBurnedByDay: async () => new Map([["2026-01-03", 500]]),
-  getSessions: async () => [],
-  getTemplates: async () => [],
-}));
+vi.mock("@/lib/profile", () => ({ getProfileSummary: async () => null }));
+vi.mock("@/lib/food", () => ({ getEntriesBetween: async () => [], getEntriesDetailed: async () => [] }));
+vi.mock("@/lib/exercise-data", () => ({ getSessions: async () => [], getTemplates: async () => [] }));
 vi.mock("@/lib/mood-data", () => ({ getMoodEntries: async () => [] }));
 vi.mock("@/lib/journal-data", () => ({ getJournalEntries: async () => [] }));
 
 const { runTool } = await import("./tools");
+const ctx = { today: "2026-01-09" };
 
 describe("get_intake_estimates", () => {
-  it("returns logged and estimated days separately, loading logs from the window start", async () => {
-    const r = await runTool("get_intake_estimates", { start: "2026-01-04", end: "2026-01-30" }, { today: "2026-01-09" });
+  it("returns stored days with sources and confidence, after making sure they're fresh", async () => {
+    const r = await runTool("get_intake_estimates", { start: "2026-01-02", end: "2026-01-30" }, ctx);
     expect(r.ok).toBe(true);
     const out = JSON.parse(r.content);
-    // Clamped to yesterday; logs loaded from the window start so Jan 2's log counts.
-    expect(out.range).toEqual({ start: "2026-01-04", end: "2026-01-08" });
-    expect(getEntriesBetween).toHaveBeenCalledWith("2026-01-01", "2026-01-08");
-    // Flat weight: window eats 7 × maintenance + 500 exercise; 3,000 logged, rest over 6 days.
-    const est = out.days.filter((d: { source: string }) => d.source === "estimated");
-    expect(est).toHaveLength(4); // Jan 4–7
-    expect(est[0].estimate_spread_over_days).toBe(7);
-    expect(out.days.at(-1)).toMatchObject({ day: "2026-01-08", source: null, intake_kcal: null });
-    expect(out.summary).toMatchObject({ logged_days: 0, estimated_days: 4, unknown_days: 1 });
-    expect(out.weeks.length).toBeGreaterThan(0);
+    expect(ensureFreshEnergy).toHaveBeenCalledWith("2026-01-09");
+    expect(out.range).toEqual({ start: "2026-01-02", end: "2026-01-08" }); // clamped to yesterday
+    const byDay = Object.fromEntries(out.days.map((d: { day: string }) => [d.day, d]));
+    expect(byDay["2026-01-02"]).toMatchObject({ source: "logged", intake_kcal: 2600 });
+    expect(byDay["2026-01-03"]).toMatchObject({ source: "partial", logged_kcal: 500 });
+    expect(byDay["2026-01-04"]).toMatchObject({ source: "estimated", estimate_spread_over_days: 7 });
+    expect(byDay["2026-01-04"].confidence).toBeDefined();
+    expect(out.summary).toMatchObject({ logged_days: 1, partly_logged_days: 1, estimated_days: 4, unknown_days: 1 }); // Jan 8: no later weigh-in
   });
 
   it("refuses a range that starts today", async () => {
-    const r = await runTool("get_intake_estimates", { start: "2026-01-09", end: "2026-01-09" }, { today: "2026-01-09" });
-    expect(r).toMatchObject({ ok: false });
+    expect(await runTool("get_intake_estimates", { start: "2026-01-09", end: "2026-01-09" }, ctx)).toMatchObject({ ok: false });
+  });
+});
+
+describe("get_energy_balance", () => {
+  it("returns the run's headline numbers", async () => {
+    const out = JSON.parse((await runTool("get_energy_balance", {}, ctx)).content);
+    expect(out).toMatchObject({ through_day: "2026-01-08", calibration: { ok: false } });
+    expect(out.running_total_since_first_weigh_in).toMatchObject({ since: "2026-01-01", predictedLb: -0.5, actualLb: -0.5 }); // smoothed trend
+    expect(out.all_time.partly_logged_days).toBe(1);
   });
 });

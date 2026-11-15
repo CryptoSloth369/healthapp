@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { scheduleEnergyRun } from "@/lib/energy-data";
 import { redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import { isDay } from "@/lib/dates";
@@ -84,6 +85,7 @@ export async function saveFoodEntry(_prev: EntryFormState, form: FormData): Prom
     }
   }
 
+  scheduleEnergyRun();
   revalidatePath("/", "layout");
   redirect(`/food?day=${day}`);
 }
@@ -92,6 +94,7 @@ export async function deleteFoodEntry(id: number, day: string) {
   if (!(await getUserId())) return;
   const supabase = await createClient();
   await supabase.from("food_entry").delete().eq("id", id);
+  scheduleEnergyRun();
   revalidatePath("/", "layout");
   redirect(`/food?day=${isDay(day) ? day : ""}`);
 }

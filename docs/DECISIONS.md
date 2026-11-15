@@ -10,7 +10,7 @@ Why things are the way they are. Add new entries at the bottom: what was decided
 | 4 | **Imperial units stored directly** (`weight_lb`, `height_in`, `distance_mi`) | The owner uses lb/ft/mi, and storing them avoids rounding drift. | A kg user. Add a display-unit setting and convert at the edges. |
 | 5 | **Local calendar days** stored as `date` from the phone's time zone (`tz` cookie) | "Today" must match the user's day, not UTC on the server. | — |
 | 6 | **Calorie target = Mifflin–St Jeor × activity + goal pace**, capped at 1%/0.5% body weight per week, with 1,500/1,200 kcal floors | Standard, transparent and safe. A manual override exists. | — |
-| 7 | **Adaptive TDEE** from intake vs trend (28 days, 70% logged) as an optional "use this target" | Measured burn beats formulas once there's data. | — |
+| 7 | ~~Adaptive TDEE~~ replaced by #19's calibrated personal burn | Measured burn beats formulas once there's data. | — |
 | 8 | **EWMA trend at 10% per day** for weight | Hides 1–4 lb water swings; the classic "Hacker's Diet" approach. | — |
 | 9 | **Exercise calories are added to the daily budget**; Activity level means activity *outside* logged workouts | The owner wanted net deficit/surplus with workouts counted. The activity setting prevents double counting. | — |
 | 10 | **Blank exercise calories are estimated** with MET × weight × time (ACSM equations for walk/run with miles) | Most workouts lack watch data. Estimates are flagged "est.". | A wearable is connected. |
@@ -22,3 +22,4 @@ Why things are the way they are. Add new entries at the bottom: what was decided
 | 16 | **Reminders scheduled in Postgres** (pg_cron → `due_reminders()` → `/api/reminders`) | The DB knows what's logged, so it can skip reminders. No service-role key in the app. Vercel Hobby cron is once a day. | — |
 | 17 | **Food data from USDA (search) + Open Food Facts (barcodes)** | Both free. USDA covers generic foods; OFF covers packaged barcodes. | — |
 | 18 | **`cacheComponents` off; `useOffline` on** | All pages are per-user, so there's nothing to prerender. Offline retry protects entries made with bad signal. | — |
+| 19 | **One stored energy model** (`runEnergyModel`): formula burn calibrated from well-logged weeks; unlogged and partial days back-calculated from the weight trend; results in `energy_day`/`energy_run`, rerun after saves, on the Recalculate button, and on read when stale | One source of truth for intake, burn and balance, cheap to read, comparable between runs. Past estimates update on each run; the previous run's summary is kept. Triggers catch every write path. | Data volume makes full reruns slow. Recompute only from the earliest changed day. |

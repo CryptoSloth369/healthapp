@@ -4,22 +4,16 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { getProfileSummary } from "@/lib/profile";
 import { getWeightHistory } from "@/lib/weight";
 import { getEntriesBetween, getEntriesDetailed } from "@/lib/food";
-import { getBurnedByDay, getSessions, getTemplates } from "@/lib/exercise-data";
+import { getSessions, getTemplates } from "@/lib/exercise-data";
 import { getMoodEntries } from "@/lib/mood-data";
 import { getJournalEntries } from "@/lib/journal-data";
-import { adaptiveTdee, dailyTotals, trendOn } from "@/lib/analytics";
+import { dailyTotals, trendOn } from "@/lib/analytics";
 import { dailyMood } from "@/lib/mood";
 import { ACTIVITIES, activityLabel, isActivity, liftHistory, liftKey, personalRecords, volume } from "@/lib/exercise";
 import { addDays, isDay } from "@/lib/dates";
 import { daysBetween } from "@/lib/trend";
-import {
-  balanceContextStart,
-  energyBalance,
-  maintenanceFor,
-  summarizeBalance,
-  weeklyBalance,
-  type BalanceSummary,
-} from "@/lib/energy-balance";
+import { summarizeBalance, weeklyBalance, type BalanceSummary } from "@/lib/energy-balance";
+import { ensureFreshEnergy, getEnergyDays } from "@/lib/energy-data";
 
 const Day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("Date as YYYY-MM-DD");
 const Range = z.object({ start: Day, end: Day });
@@ -51,11 +45,12 @@ function balanceSummaryOut(s: BalanceSummary) {
   return {
     days: s.days,
     logged_days: s.loggedDays,
+    partly_logged_days: s.partialDays,
     estimated_days: s.estimatedDays,
     unknown_days: s.unknownDays,
     avg_intake_kcal_all_known_days: s.avgIntake,
     avg_intake_kcal_logged_days: s.avgLoggedIntake,
-    avg_intake_kcal_estimated_days: s.avgEstimatedIntake,
+    avg_intake_kcal_estimated_and_partial_days: s.avgEstimatedIntake,
     avg_burn_kcal: s.avgBurn,
     avg_balance_kcal: s.avgBalance,
     implied_lb_per_week: s.lbPerWeek,
@@ -236,15 +231,28 @@ export const TOOLS = [
   def({
     name: "get_energy_balance",
     description:
-      "Measured maintenance calories (adaptive TDEE) from the last 28 complete days of food logs and the weight trend, plus the current weekly rate of change. Includes why it can't be computed if data is missing. For day-by-day deficit/surplus including unlogged days, use get_intake_estimates.",
+      "Headline numbers from the energy model (rerun first if anything changed): the user's personal maintenance burn (formula corrected by weeks where they logged most food, or why it isn't calibrated yet), the running deficit/surplus total since the first weigh-in vs the actual trend change, all-time and last-28-day summaries, what changed since the previous run, plus the current trend weight and weekly rate. Use get_intake_estimates for day-by-day numbers.",
     schema: z.object({}),
     async run(_i, ctx) {
-      const yesterday = addDays(ctx.today, -1);
-      const start = addDays(yesterday, -27);
-      const [food, hist] = await Promise.all([getEntriesBetween(start, yesterday), getWeightHistory()]);
+      const [{ latest, previous }, hist] = await Promise.all([ensureFreshEnergy(ctx.today), getWeightHistory()]);
+      if (!latest) throw new Error("no results yet: needs weigh-ins or food logs");
+      const r = latest.result;
+      const p = previous?.result;
       return {
-        window: { start, end: yesterday },
-        adaptive_tdee: adaptiveTdee(dailyTotals(food, start, yesterday), hist.points),
+        computed_at: latest.ran_at,
+        through_day: latest.last_day,
+        burn_per_day_before_exercise: r.burnNow,
+        calibration: r.calibration,
+        running_total_since_first_weigh_in: r.totals,
+        all_time: balanceSummaryOut(r.allTime),
+        last_28_days: balanceSummaryOut(r.recent),
+        previous_run: p
+          ? {
+              computed_at: previous!.ran_at,
+              personal_burn: p.burnNow?.personal ?? null,
+              last_28_days_avg_balance_kcal: p.recent.avgBalance,
+            }
+          : null,
         current_trend_lb: r1(hist.points.at(-1)?.trend),
         rate_lb_per_week: hist.rateLbPerWeek,
       };
@@ -253,25 +261,20 @@ export const TOOLS = [
   def({
     name: "get_intake_estimates",
     description:
-      "Calories eaten and daily deficit/surplus, including days with no food log: on those days intake is back-calculated from the weight trend (burn + trend change × 3,500 kcal/lb, minus logged days, spread evenly over the unlogged days between weigh-ins at least a week apart). Burn = formula maintenance at that day's trend weight + logged exercise. Every day has source 'logged', 'estimated' or null (unknown: before the first weigh-in or after the last full week of weigh-ins). Returns a summary, Monday-start weeks, and daily rows for ranges up to 120 days. The range ends yesterday at the latest. Max 400 days.",
+      "Calories eaten and daily deficit/surplus from the energy model, including days with no or partial food logs. Unlogged days: intake back-calculated from the weight trend (burn + trend change × 3,500 kcal/lb, minus logged days, spread evenly over the open days between weigh-ins). Burn = personal maintenance at that day's trend weight + logged exercise. Each day has source 'logged', 'partial' (under 40% of burn logged; the logged kcal is kept as a minimum and the rest estimated), 'estimated', or null (unknown), and estimates have a confidence (high/medium/low). Returns a summary, Monday-start weeks, and daily rows for ranges up to 120 days. Ends yesterday at the latest. Max 400 days.",
     schema: Range,
     async run(input, ctx) {
       const yesterday = addDays(ctx.today, -1);
       if (input.start > yesterday) throw new Error("start must be before today (today is still in progress)");
       const { start, end } = checkRange({ start: input.start, end: input.end > yesterday ? yesterday : input.end }, 400, ctx);
-      const [summary, hist] = await Promise.all([getProfileSummary(), getWeightHistory()]);
-      if (!summary) throw new Error("profile not found");
-      const maintenance = maintenanceFor(summary.profile, ctx.today);
-      if (!maintenance) throw new Error(`can't estimate calories burned: profile is missing ${summary.missing.join(", ")}`);
-      const from = balanceContextStart(hist.points, start);
-      const [food, burned] = await Promise.all([getEntriesBetween(from, end), getBurnedByDay(from, end)]);
-      const logged = new Map<string, number>();
-      for (const e of food) logged.set(e.eaten_on, (logged.get(e.eaten_on) ?? 0) + e.kcal);
-      const days = energyBalance({ start, end, logged, exercise: burned, points: hist.points, maintenance });
+      const { latest } = await ensureFreshEnergy(ctx.today);
+      const days = await getEnergyDays(start, end);
       return {
         range: { start, end },
+        computed_at: latest?.ran_at ?? null,
+        burn_calibrated: latest?.result.calibration.ok ?? false,
         notes:
-          "balance = intake − burn (negative = deficit). Estimated values are only as good as the formula maintenance and the weigh-in frequency; estimated days in one window share the same intake. Partly logged days count as logged and can make estimates elsewhere too high. Report logged and estimated numbers separately.",
+          "balance = intake − burn (negative = deficit). Days before the first record are omitted. Estimated days in one window share the same intake. Report logged, partly logged and estimated numbers separately.",
         summary: balanceSummaryOut(summarizeBalance(days)),
         weeks: weeklyBalance(days).map((w) => ({ week_start: w.weekStart, ...balanceSummaryOut(w) })),
         ...(days.length <= INTAKE_DAILY_ROWS_MAX
@@ -280,11 +283,13 @@ export const TOOLS = [
                 day: d.day,
                 source: d.source,
                 intake_kcal: d.intake,
+                ...(d.source === "partial" ? { logged_kcal: d.logged } : {}),
+                ...(d.confidence ? { confidence: d.confidence } : {}),
                 burn_kcal: d.burn,
                 ...(d.exercise ? { exercise_kcal: d.exercise } : {}),
                 balance_kcal: d.balance,
                 trend_lb: r1(d.trend),
-                ...(d.source === "estimated" && d.window ? { estimate_spread_over_days: d.window.days } : {}),
+                ...(d.source !== "logged" && d.window ? { estimate_spread_over_days: d.window.days } : {}),
               })),
             }
           : { days_omitted: `range is over ${INTAKE_DAILY_ROWS_MAX} days; ask for a shorter range for daily rows` }),

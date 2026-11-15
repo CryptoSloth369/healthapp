@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { scheduleEnergyRun } from "@/lib/energy-data";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import { isDay } from "@/lib/dates";
 
@@ -27,6 +28,7 @@ export async function saveWeight(_prev: WeightFormState, form: FormData): Promis
     );
   if (error) return { error: error.message };
 
+  scheduleEnergyRun();
   revalidatePath("/", "layout");
   return { savedAt: Date.now() };
 }
@@ -36,6 +38,7 @@ export async function deleteWeight(id: number): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { error } = await supabase.from("weight_entry").delete().eq("id", id);
   if (error) return { error: error.message };
+  scheduleEnergyRun();
   revalidatePath("/", "layout");
   return {};
 }

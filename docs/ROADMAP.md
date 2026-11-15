@@ -17,6 +17,18 @@ Built one step at a time; each step is one commit on `main` (`git log --oneline`
 | 9 | **AI coach:** chat with tools over all logs, streaming with progress, saved conversations, approval-gated target/template suggestions | `0004` |
 | 10 | **Extras:** USDA food search, barcode scanning (camera/photo/typed), CSV export and JSON backup | — |
 | 11 | **Journal:** free-form entries under Mood → Journal, dictation via the browser's speech recognition, day's mood shown with entries, coach `get_journal` tool, CSV export | `0005` |
+| — | **Back-calculated intake:** unlogged days estimated from the weight trend, Deficit & surplus card, logged vs estimated everywhere, coach `get_intake_estimates` | — |
+
+## In progress: step 12, energy model
+One algorithm (`runEnergyModel` in `src/lib/energy-balance.ts`) computes everything about intake and burn, saves the result, and reruns on its own.
+1. **Trend weight** from weigh-ins (unchanged).
+2. **Personal burn:** windows where most days are fully logged measure how far the formula maintenance is off; the average correction (last 90 days, at least 14 such days) is applied everywhere. This replaces the separate adaptive TDEE.
+3. **Fill the gaps** with the corrected burn. Every estimated day gets a confidence (high/medium/low) from the window length and weigh-in count. Short histories (3–6 days) get one low-confidence window instead of nothing.
+4. **Partial days:** a logged day under 40% of the formula burn is flagged `partial`. Its logged calories are kept as a minimum and the rest is estimated.
+5. **Running totals** from the first weigh-in: cumulative deficit/surplus and the weight change it predicts vs the actual trend.
+
+Storage (migration `0006`): `energy_day` (one row per day), `energy_run` (one summary per run; recent runs kept so changes can be compared), `energy_state` (a "needs rerun" flag set by database triggers on any food, weight, workout or profile change).
+When it runs: a **Recalculate** button on the dashboard; automatically after each save (after the response, so saving stays fast); and when the dashboard or coach reads results that are out of date (new data, or a new day has finished). Past estimates are updated on each run; the previous run's summary is shown for comparison.
 
 ## Backlog (ideas, not commitments)
 - Weekly coach review: an automatic Sunday summary, delivered via push.

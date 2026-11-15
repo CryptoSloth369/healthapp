@@ -4,6 +4,7 @@ import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { formatDay } from "@/lib/dates";
 import { daysBetween } from "@/lib/trend";
 import { barPath, HatchPattern, HatchSwatch, SolidSwatch } from "./chart-bits";
+import { sourceLine } from "./calorie-chart";
 
 /** One bar: a single day, or a week's daily average (start…end). */
 export type BalanceBar = {
@@ -13,8 +14,12 @@ export type BalanceBar = {
   balance: number | null;
   intake: number | null;
   burn: number | null;
+  /** Calories from logs (the solid part of the bar is this share of intake). */
+  loggedKcal: number;
   logged: number;
+  partial: number;
   estimated: number;
+  confidence?: string | null;
   label?: string;
   /** Days the estimate was spread over (single-day estimated bars). */
   windowDays?: number | null;
@@ -161,7 +166,7 @@ export function BalanceChart({ bars, trend, start, end }: { bars: BalanceBar[]; 
             const x0 = g.xDay(b.start) + gap / 2;
             const x1 = g.xDay(b.end) + g.dayW - gap / 2;
             const y1 = g.yB(b.balance);
-            const share = b.logged / Math.max(1, b.logged + b.estimated);
+            const share = b.intake ? Math.min(1, b.loggedKcal / b.intake) : 0;
             const color = b.balance < 0 ? DEFICIT : SURPLUS;
             const hatch = `url(#${uid}-${b.balance < 0 ? "d" : "s"})`;
             const split = zero + (y1 - zero) * share;
@@ -232,7 +237,7 @@ export function BalanceChart({ bars, trend, start, end }: { bars: BalanceBar[]; 
               <p className="flex items-center gap-1.5">
                 <SolidSwatch color={hb.balance < 0 ? DEFICIT : SURPLUS} />
                 <strong className="tabular-nums">
-                  {hb.estimated > 0 ? "≈" : ""}
+                  {hb.estimated + hb.partial > 0 ? "≈" : ""}
                   {Math.abs(hb.balance).toLocaleString()}
                 </strong>
                 <span className="text-muted">{hb.balance < 0 ? "deficit" : "surplus"}</span>
@@ -240,18 +245,15 @@ export function BalanceChart({ bars, trend, start, end }: { bars: BalanceBar[]; 
             )}
             {hb.intake != null && (
               <p className="tabular-nums">
-                Ate {hb.estimated > 0 ? "≈" : ""}
+                Ate {hb.estimated + hb.partial > 0 ? "≈" : ""}
                 {hb.intake.toLocaleString()}
                 {hb.burn != null && <span className="text-muted"> · burned {hb.burn.toLocaleString()}</span>}
               </p>
             )}
-            {(hb.logged > 0 || hb.estimated > 0) && (
+            {hb.logged + hb.partial + hb.estimated > 0 && (
               <p className="text-muted">
-                {hb.logged + hb.estimated === 1 && hb.end === hb.start
-                  ? hb.logged
-                    ? "Logged"
-                    : `Estimated from weight${hb.windowDays ? ` (spread over ${hb.windowDays} days)` : ""}`
-                  : [hb.logged && `${hb.logged} logged`, hb.estimated && `${hb.estimated} est.`].filter(Boolean).join(" · ") + " days"}
+                {sourceLine(hb, hb.start === hb.end ? "day" : "week")}
+                {hb.start === hb.end && hb.estimated > 0 && hb.windowDays ? `, spread over ${hb.windowDays} days` : ""}
               </p>
             )}
             {hbTrend != null && <p className="text-muted tabular-nums">Trend {hbTrend.toFixed(1)} lb</p>}

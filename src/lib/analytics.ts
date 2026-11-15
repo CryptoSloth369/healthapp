@@ -4,7 +4,6 @@
  */
 import { daysBetween, type TrendPoint } from "./trend";
 import { sumNutrients, type Nutrients, type Totals } from "./nutrition";
-import { KCAL_PER_LB } from "./tdee";
 
 export type DayTotals = { day: string; logged: boolean } & Totals;
 
@@ -69,58 +68,6 @@ export function trendOn(points: TrendPoint[], day: string): number | null {
     v = p.trend;
   }
   return v;
-}
-
-export type AdaptiveTdee =
-  | {
-      ok: true;
-      tdee: number;
-      avgIntake: number;
-      loggedDays: number;
-      spanDays: number;
-      trendChangeLb: number;
-      lbPerWeek: number;
-    }
-  | { ok: false; reason: string };
-
-/**
- * Energy balance: what you burn ≈ what you ate − what your body stored.
- * Stored energy comes from the change in TREND weight (~3,500 kcal/lb).
- *
- * Needs ≥ 14 days, food logged on ≥ 70% of them, and weigh-ins near both
- * ends of the window. Unlogged days are assumed to look like logged ones.
- */
-export function adaptiveTdee(days: DayTotals[], points: TrendPoint[]): AdaptiveTdee {
-  if (days.length < 14) return { ok: false, reason: "Needs at least 2 weeks of data." };
-  const start = days[0].day;
-  const end = days[days.length - 1].day;
-  const logged = days.filter((d) => d.logged);
-  const need = Math.ceil(days.length * 0.7);
-  if (logged.length < need)
-    return { ok: false, reason: `Log food on more days (${logged.length} of ${days.length}; need ${need}).` };
-
-  const inWindow = points.filter((p) => p.day >= start && p.day <= end);
-  const nearStart = inWindow.some((p) => daysBetween(start, p.day) <= 6);
-  const nearEnd = inWindow.some((p) => daysBetween(p.day, end) <= 6);
-  if (!nearStart || !nearEnd) return { ok: false, reason: "Weigh in at least weekly." };
-
-  // Trend at the window edges (carry the last known trend forward).
-  const tStart = trendOn(points, start) ?? inWindow[0].trend;
-  const tEnd = trendOn(points, end)!;
-  const spanDays = days.length;
-  const change = tEnd - tStart;
-  const avgIntake = logged.reduce((a, d) => a + d.kcal, 0) / logged.length;
-  const tdee = avgIntake - (change * KCAL_PER_LB) / spanDays;
-
-  return {
-    ok: true,
-    tdee: Math.round(tdee / 10) * 10,
-    avgIntake: Math.round(avgIntake),
-    loggedDays: logged.length,
-    spanDays,
-    trendChangeLb: Math.round(change * 10) / 10,
-    lbPerWeek: Math.round(((change * 7) / spanDays) * 100) / 100,
-  };
 }
 
 export type WeekRow = {

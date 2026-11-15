@@ -50,8 +50,10 @@ src/
     today.ts, dates.ts        local-day handling
     tdee.ts                   BMR, TDEE, goal-based target, macros
     trend.ts                  weight EWMA trend, weekly rate
-    analytics.ts              daily totals, adherence, adaptive TDEE, weekly rows
-    energy-balance.ts         intake back-calculated from weight on unlogged days, daily deficit/surplus
+    analytics.ts              daily totals, adherence, weekly rows
+    energy-balance.ts         the energy model: personal burn, partial days, gap filling, confidence, running total
+    energy-store.ts           energy model rows ↔ days, changed-row diff, per-run summary
+    energy-data.ts            runs the model and stores it; staleness check; after-save rerun
     nutrition.ts              meals, totals, per-serving scaling
     exercise.ts               activities/MET, calorie estimate, volume, e1RM, lift history
     mood.ts                   daily mood, sleep/calorie/exercise splits, tag stats
@@ -63,7 +65,7 @@ src/
     push.ts, reminders.ts     web push (VAPID) and reminder prefs
     profile.ts, food.ts, weight.ts, exercise-data.ts, mood-data.ts, journal-data.ts   data loaders
 public/sw.js, offline.html    service worker and offline fallback
-supabase/migrations/          0001…0005, applied in order
+supabase/migrations/          0001…0006, applied in order
 supabase/reminders-schedule.sql   pg_cron template (fill in URL + secret, don't commit)
 ```
 
@@ -81,12 +83,15 @@ Every user table has `user_id uuid default auth.uid()` and RLS `user_id = auth.u
 | `workout_template`, `template_exercise` | templates | exercises with sets/reps/weight |
 | `mood_entry` | check-ins | mood/energy/stress 1–5, sleep_hours, tags[], note; several per day allowed |
 | `journal_entry` | journal | written_on (local day), written_at, updated_at, body (1–20,000 chars); several per day allowed |
+| `energy_day` | energy model output | one row per day: intake, logged kcal, source (logged/partial/estimated), confidence, burn, balance, running total, trend, window. Rewritten by each run (changed rows only) |
+| `energy_run` | energy model runs | ran_at, trigger (manual/auto/stale), model_version, `result` jsonb (calibration, burn now, running total, all-time and 28-day summaries). Last 30 kept |
+| `energy_state` | "needs rerun" flag | one row per user; set by triggers on food/weight/exercise/profile body-stat changes |
 | `push_subscription` | devices for push | endpoint unique |
 | `reminder_pref` | reminder times | local times + timezone + `last_sent` per kind |
 | `assistant_conversation`, `assistant_message` | coach history | messages store API content blocks verbatim (`seq` order) |
 
 Storage: private bucket `meal-photos`, path `<user_id>/<day>/<uuid>.jpg`, shown via signed URLs.
-DB function: `public.due_reminders()` (security definer; only the DB owner can execute it).
+DB functions: `public.due_reminders()` (security definer; only the DB owner can execute it); `food_kcal_by_day()` and `exercise_kcal_by_day()` (invoker, RLS applies) give daily totals to the energy model; `mark_energy_dirty()` is the trigger behind `energy_state`.
 
 ## Key flows
 
@@ -98,9 +103,15 @@ DB function: `public.due_reminders()` (security definer; only the DB owner can e
 
 **Weight trend** (`trend.ts`). EWMA at 10% per day, gap-aware. The weekly rate is a least-squares slope of the trend over 14 days.
 
-**Adaptive TDEE** (`analytics.ts`). Over the last 28 complete days: average intake − (trend change × 3,500 / days). It needs 70% of days logged and weigh-ins near both ends. The dashboard can apply a suggested target from it.
 
-**Back-calculated intake / deficit & surplus** (`energy-balance.ts`). Computed on the fly (nothing stored). Weigh-ins are grouped into windows at least 7 days long; a weigh-in on day D covers food through D − 1. For each window: food eaten = Σ burn + trend change × 3,500, where burn = formula maintenance at that day's (interpolated) trend weight + logged exercise. Logged days keep their logged kcal; the remainder is spread evenly over the unlogged days (clamped at 0). Every day carries `source: "logged" | "estimated" | null`, and summaries count each separately. Days outside a window (before the first weigh-in, or after the last full window) stay unknown. The dashboard loads food/exercise from the start of the window the range begins in. In charts, logged = solid, estimated = hatched; in text, `≈` marks a value that includes estimates. The coach reads the same numbers with `get_intake_estimates` (max 400 days; daily rows up to 120 days; ends yesterday), and its instructions say to report logged and estimated values separately.
+**Energy model** (`energy-balance.ts` → `runEnergyModel`). One algorithm for intake, burn and balance, run over all history and stored.
+1. Burn per day = formula maintenance at that day's trend weight (interpolated between weigh-ins) + logged exercise.
+2. A logged day under 40% of that burn is `partial`: the logged kcal is kept as a minimum and the rest estimated.
+3. *Personal burn:* weigh-in windows (≥ 7 days; a weigh-in on day D covers food through D − 1) with ≥ 70% fully logged days measure the formula's error (avg logged intake × days − trend change × 3,500 − formula burn). The day-weighted average over the last 90 days, needing ≥ 14 such days and capped at ±1,000, is added to every day's burn. This replaced the separate adaptive TDEE.
+4. *Gaps:* per window, food eaten = Σ burn + trend change × 3,500. Logged days keep their kcal; the rest is spread evenly over unlogged and partial days (never below a partial day's logged kcal, never below 0). Confidence: high (≤ 14 days, ≥ 4 weigh-ins), medium, low (> 28 days, or a 3–6 day history, which gets one short window instead of nothing).
+5. Running total of the balance from the first weigh-in, compared with the actual trend change.
+
+**Running it** (`energy-data.ts`). `recalculateEnergy()` loads weights (paged), daily food/exercise totals (SQL functions), and the stored rows; runs the model; upserts only changed `energy_day` rows; inserts an `energy_run` (pruned to 30); clears `energy_state.dirty` only if it didn't change mid-run. It runs (a) from the dashboard's **Recalculate** button, (b) after every food/weight/workout/profile save via `after()` (skipped when already fresh), and (c) from `ensureFreshEnergy()` before the dashboard or coach reads, when dirty, a new day has finished, or `MODEL_VERSION` went up. No nightly job: pg_cron has no user session, and the app has no service-role key. Screens read `energy_day`; in charts logged kcal are solid and estimated kcal hatched, and `≈` marks text values that include estimates. The coach reads the same data with `get_energy_balance` (headline numbers, previous run) and `get_intake_estimates` (days/weeks, max 400 days).
 
 **Exercise calories** (`exercise.ts`). The entered value wins. Otherwise MET × kg × hours, using the latest weigh-in on or before the workout date. Walking and running use the ACSM speed equations when miles are given.
 

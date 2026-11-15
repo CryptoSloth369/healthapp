@@ -2,6 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { scheduleEnergyRun } from "@/lib/energy-data";
 import { redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import { estimateFromPhoto, EstimateError } from "@/lib/photo-estimate";
@@ -92,6 +93,7 @@ export async function savePhotoItems(input: {
   const { error } = await supabase.from("food_entry").insert(rows);
   if (error) return { error: error.message };
 
+  scheduleEnergyRun();
   revalidatePath("/", "layout");
   redirect(`/food?day=${input.day}`);
 }

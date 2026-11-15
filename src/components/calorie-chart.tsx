@@ -5,10 +5,20 @@ import { formatDay } from "@/lib/dates";
 import { barPath, HatchPattern } from "./chart-bits";
 
 /**
- * kcal = null: nothing logged or estimated. `logged`/`estimated` count the days
- * behind the bar (1/0 or 0/1 for a single day; up to 7 for a weekly average).
+ * kcal = null: nothing logged or estimated. `loggedKcal` is the part that came
+ * from food logs (drawn solid; the rest is hatched). `logged`/`partial`/
+ * `estimated` count the days behind the bar (one day, or up to 7 for a week).
  */
-export type CalorieBar = { day: string; kcal: number | null; logged: number; estimated: number; label?: string };
+export type CalorieBar = {
+  day: string;
+  kcal: number | null;
+  loggedKcal: number;
+  logged: number;
+  partial: number;
+  estimated: number;
+  confidence?: string | null;
+  label?: string;
+};
 
 const HEIGHT = 200;
 const M = { top: 14, right: 8, bottom: 24, left: 40 };
@@ -90,7 +100,7 @@ export function CalorieChart({ bars, target, unit }: { bars: CalorieBar[]; targe
           const x0 = g.x(i);
           const x1 = x0 + g.bw;
           const top = g.y(b.kcal);
-          const share = b.logged / Math.max(1, b.logged + b.estimated);
+          const share = Math.min(1, b.loggedKcal / b.kcal);
           // Solid (logged) from the baseline, hatched (estimated) above it, with a 2px gap between.
           const split = base - (base - top) * share;
           const op = hover == null || hover === i ? 1 : 0.55;
@@ -131,18 +141,12 @@ export function CalorieChart({ bars, target, unit }: { bars: CalorieBar[]; targe
             <>
               <p>
                 <strong className="tabular-nums">
-                  {hb.estimated > 0 ? "≈" : ""}
+                  {hb.estimated + hb.partial > 0 ? "≈" : ""}
                   {hb.kcal.toLocaleString()}
                 </strong>{" "}
                 <span className="text-muted">kcal{unit === "week" ? "/day avg" : ""}</span>
               </p>
-              <p className="text-muted">
-                {unit === "week"
-                  ? [hb.logged && `${hb.logged} logged`, hb.estimated && `${hb.estimated} est.`].filter(Boolean).join(" · ") + " days"
-                  : hb.logged
-                    ? "Logged"
-                    : "Estimated from weight"}
-              </p>
+              <p className="text-muted">{sourceLine(hb, unit)}</p>
             </>
           )}
           {hb.kcal != null && target != null && (
@@ -155,4 +159,17 @@ export function CalorieChart({ bars, target, unit }: { bars: CalorieBar[]; targe
       )}
     </div>
   );
+}
+
+/** "Logged", "Logged 600, rest estimated", "Estimated from weight (medium)", or day counts for a week. */
+export function sourceLine(b: { loggedKcal: number; logged: number; partial: number; estimated: number; confidence?: string | null }, unit: string) {
+  if (unit === "week")
+    return (
+      [b.logged && `${b.logged} logged`, b.partial && `${b.partial} partly logged`, b.estimated && `${b.estimated} est.`]
+        .filter(Boolean)
+        .join(" · ") + " days"
+    );
+  if (b.partial) return `Logged ${b.loggedKcal.toLocaleString()}, rest estimated`;
+  if (b.logged) return "Logged";
+  return `Estimated from weight${b.confidence ? ` (${b.confidence} confidence)` : ""}`;
 }

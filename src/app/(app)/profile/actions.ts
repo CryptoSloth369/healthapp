@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { scheduleEnergyRun } from "@/lib/energy-data";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import { isDay } from "@/lib/dates";
 import { ACTIVITY_LEVELS, type ActivityLevel } from "@/lib/tdee";
@@ -72,6 +73,7 @@ export async function saveProfile(
     if (wErr) return { error: wErr.message };
   }
 
+  scheduleEnergyRun();
   revalidatePath("/", "layout");
   return { saved: true };
 }

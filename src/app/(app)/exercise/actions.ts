@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { scheduleEnergyRun } from "@/lib/energy-data";
 import { redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import { isDay } from "@/lib/dates";
@@ -94,6 +95,7 @@ export async function saveWorkout(input: WorkoutInput): Promise<{ error: string 
     if (error) return { error: `Workout saved, but the sets failed: ${error.message}` };
   }
 
+  scheduleEnergyRun();
   revalidatePath("/", "layout");
   redirect(`/exercise?saved=${entryId}`);
 }
@@ -102,6 +104,7 @@ export async function deleteWorkout(id: number) {
   if (!(await getUserId())) return;
   const supabase = await createClient();
   await supabase.from("exercise_entry").delete().eq("id", id);
+  scheduleEnergyRun();
   revalidatePath("/", "layout");
   redirect("/exercise");
 }
