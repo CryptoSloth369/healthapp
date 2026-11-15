@@ -29,8 +29,8 @@ const run: RunRecord = {
   result: runResult(model, model.days.length),
 };
 const ensureFreshEnergy = vi.fn(async () => ({ latest: run, previous: null, ranNow: true }));
-const getEnergyDays = vi.fn(async (start: string, end: string) => model.days.filter((d) => d.day >= start && d.day <= end));
-vi.mock("@/lib/energy-data", () => ({ ensureFreshEnergy, getEnergyDays }));
+const readEnergyDays = vi.fn(async (start: string, end: string) => model.days.filter((d) => d.day >= start && d.day <= end));
+vi.mock("@/lib/energy-data", () => ({ ensureFreshEnergy, readEnergyDays }));
 vi.mock("@/lib/weight", () => ({ getWeightHistory: async () => ({ points, rateLbPerWeek: null, entries: [] }) }));
 vi.mock("@/lib/profile", () => ({ getProfileSummary: async () => null }));
 vi.mock("@/lib/food", () => ({ getEntriesBetween: async () => [], getEntriesDetailed: async () => [] }));

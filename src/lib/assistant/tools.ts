@@ -13,7 +13,7 @@ import { ACTIVITIES, activityLabel, isActivity, liftHistory, liftKey, personalRe
 import { addDays, isDay } from "@/lib/dates";
 import { daysBetween } from "@/lib/trend";
 import { summarizeBalance, weeklyBalance, type BalanceSummary } from "@/lib/energy-balance";
-import { ensureFreshEnergy, getEnergyDays } from "@/lib/energy-data";
+import { ensureFreshEnergy, readEnergyDays } from "@/lib/energy-data";
 
 const Day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("Date as YYYY-MM-DD");
 const Range = z.object({ start: Day, end: Day });
@@ -234,8 +234,8 @@ export const TOOLS = [
       "Headline numbers from the energy model (rerun first if anything changed): the user's personal maintenance burn (formula corrected by weeks where they logged most food, or why it isn't calibrated yet), the running deficit/surplus total since the first weigh-in vs the actual trend change, all-time and last-28-day summaries, what changed since the previous run, plus the current trend weight and weekly rate. Use get_intake_estimates for day-by-day numbers.",
     schema: z.object({}),
     async run(_i, ctx) {
-      const [{ latest, previous }, hist] = await Promise.all([ensureFreshEnergy(ctx.today), getWeightHistory()]);
-      if (!latest) throw new Error("no results yet: needs weigh-ins or food logs");
+      const [{ latest, previous, error }, hist] = await Promise.all([ensureFreshEnergy(ctx.today), getWeightHistory()]);
+      if (!latest) throw new Error(error ?? "no results yet: needs weigh-ins or food logs");
       const r = latest.result;
       const p = previous?.result;
       return {
@@ -267,8 +267,9 @@ export const TOOLS = [
       const yesterday = addDays(ctx.today, -1);
       if (input.start > yesterday) throw new Error("start must be before today (today is still in progress)");
       const { start, end } = checkRange({ start: input.start, end: input.end > yesterday ? yesterday : input.end }, 400, ctx);
-      const { latest } = await ensureFreshEnergy(ctx.today);
-      const days = await getEnergyDays(start, end);
+      const { latest, error } = await ensureFreshEnergy(ctx.today);
+      if (error && !latest) throw new Error(error);
+      const days = await readEnergyDays(start, end);
       return {
         range: { start, end },
         computed_at: latest?.ran_at ?? null,

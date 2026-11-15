@@ -20,13 +20,19 @@ import type { Profile } from "@/lib/types";
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 type Trigger = RunRecord["trigger"];
 
+type DbError = { message: string; code?: string; details?: string | null; hint?: string | null };
+/** A thrown error that says which step failed and everything Supabase reported. */
+function dbError(step: string, e: DbError) {
+  return new Error([`${step}: ${e.message}`, e.code && `code ${e.code}`, e.details, e.hint].filter(Boolean).join(" · "));
+}
+
 /** Supabase returns at most 1,000 rows per request; read everything in pages. */
 const PAGE = 1000;
-async function readAll<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>) {
+async function readAll<T>(step: string, page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: DbError | null }>) {
   const out: T[] = [];
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await page(from, from + PAGE - 1);
-    if (error) throw new Error(error.message);
+    if (error) throw dbError(step, error);
     out.push(...(data ?? []));
     if (!data || data.length < PAGE) return out;
   }
@@ -56,12 +62,12 @@ export async function recalculateEnergy(trigger: Trigger, today?: string): Promi
       .select("sex, birth_date, height_in, activity_level")
       .eq("user_id", userId)
       .single<Pick<Profile, "sex" | "birth_date" | "height_in" | "activity_level">>(),
-    readAll<{ measured_on: string; weight_lb: number }>((a, b) =>
+    readAll<{ measured_on: string; weight_lb: number }>("Reading weigh-ins", (a, b) =>
       supabase.from("weight_entry").select("measured_on, weight_lb").order("measured_on").range(a, b),
     ),
-    readAll<{ day: string; kcal: number }>((a, b) => supabase.rpc("food_kcal_by_day").range(a, b)),
-    readAll<{ day: string; kcal: number }>((a, b) => supabase.rpc("exercise_kcal_by_day").range(a, b)),
-    readAll<EnergyDayRow>((a, b) => supabase.from("energy_day").select(ENERGY_DAY_COLS).order("day").range(a, b)),
+    readAll<{ day: string; kcal: number }>("Reading food totals", (a, b) => supabase.rpc("food_kcal_by_day").range(a, b)),
+    readAll<{ day: string; kcal: number }>("Reading exercise totals", (a, b) => supabase.rpc("exercise_kcal_by_day").range(a, b)),
+    readAll<EnergyDayRow>("Reading saved days", (a, b) => supabase.from("energy_day").select(ENERGY_DAY_COLS).order("day").range(a, b)),
   ]);
 
   const model = runEnergyModel({
@@ -75,7 +81,7 @@ export async function recalculateEnergy(trigger: Trigger, today?: string): Promi
   const { upsert, remove } = diffRows(existing, model.days.map(toRow));
   for (const rows of chunks(upsert, 500)) {
     const { error } = await supabase.from("energy_day").upsert(rows.map((r) => ({ ...r, user_id: userId })), { onConflict: "user_id,day" });
-    if (error) throw new Error(error.message);
+    if (error) throw dbError("Saving days", error);
   }
   for (const days of chunks(remove, 200)) await supabase.from("energy_day").delete().in("day", days);
 
@@ -90,7 +96,7 @@ export async function recalculateEnergy(trigger: Trigger, today?: string): Promi
     })
     .select(RUN_COLS)
     .single<RunRecord>();
-  if (error) throw new Error(error.message);
+  if (error) throw dbError("Saving the run", error);
 
   // Keep the most recent runs only.
   const { data: old } = await supabase.from("energy_run").select("id").order("ran_at", { ascending: false }).range(KEEP_RUNS, KEEP_RUNS + 200);
@@ -103,13 +109,21 @@ export async function recalculateEnergy(trigger: Trigger, today?: string): Promi
   return run;
 }
 
-export type EnergyStatus = { latest: RunRecord | null; previous: RunRecord | null; ranNow: boolean };
+export type EnergyStatus = {
+  latest: RunRecord | null;
+  previous: RunRecord | null;
+  ranNow: boolean;
+  /** Set when the model couldn't run; screens show it instead of failing. */
+  error?: string;
+};
 
 async function status(supabase: Supabase) {
-  const [{ data: state }, { data: runs }] = await Promise.all([
+  const [{ data: state, error: e1 }, { data: runs, error: e2 }] = await Promise.all([
     supabase.from("energy_state").select("dirty").maybeSingle<{ dirty: boolean }>(),
     supabase.from("energy_run").select(RUN_COLS).order("ran_at", { ascending: false }).limit(KEEP_RUNS).overrideTypes<RunRecord[], { merge: false }>(),
   ]);
+  if (e1) throw dbError("Reading the rerun flag", e1);
+  if (e2) throw dbError("Reading past runs", e2);
   return { dirty: state?.dirty ?? true, runs: runs ?? [] };
 }
 
@@ -123,12 +137,20 @@ function isStale(s: { dirty: boolean; runs: RunRecord[] }, today: string) {
  * a new day has finished. Used by the dashboard and the coach.
  */
 export async function ensureFreshEnergy(today: string): Promise<EnergyStatus> {
-  const supabase = await createClient();
-  const s = await status(supabase);
-  if (!isStale(s, today)) return { latest: s.runs[0], previous: previousRun(s.runs), ranNow: false };
-  const run = await recalculateEnergy("stale", today);
-  const runs = run ? [run, ...s.runs] : s.runs;
-  return { latest: runs[0] ?? null, previous: previousRun(runs), ranNow: !!run };
+  let runs: RunRecord[] = [];
+  try {
+    const supabase = await createClient();
+    const s = await status(supabase);
+    runs = s.runs;
+    if (!isStale(s, today)) return { latest: s.runs[0], previous: previousRun(s.runs), ranNow: false };
+    const run = await recalculateEnergy("stale", today);
+    if (run) runs = [run, ...s.runs];
+    return { latest: runs[0] ?? null, previous: previousRun(runs), ranNow: !!run };
+  } catch (err) {
+    // Never take a screen down: show the last good results and the reason.
+    console.error("energy model run failed", err);
+    return { latest: runs[0] ?? null, previous: previousRun(runs), ranNow: false, error: (err as Error).message };
+  }
 }
 
 /**
@@ -147,10 +169,20 @@ export function scheduleEnergyRun() {
   });
 }
 
-/** Stored days in a range (inclusive), oldest first. */
+/** Stored days in a range (inclusive), oldest first. Empty if they can't be read. */
 export async function getEnergyDays(start: string, end: string): Promise<BalanceDay[]> {
+  try {
+    return await readEnergyDays(start, end);
+  } catch (err) {
+    console.error("reading energy days failed", err);
+    return [];
+  }
+}
+
+/** Like getEnergyDays, but throws (for the coach, which reports the error). */
+export async function readEnergyDays(start: string, end: string): Promise<BalanceDay[]> {
   const supabase = await createClient();
-  const rows = await readAll<EnergyDayRow>((a, b) =>
+  const rows = await readAll<EnergyDayRow>("Reading saved days", (a, b) =>
     supabase.from("energy_day").select(ENERGY_DAY_COLS).gte("day", start).lte("day", end).order("day").range(a, b),
   );
   return rows.map(fromRow);

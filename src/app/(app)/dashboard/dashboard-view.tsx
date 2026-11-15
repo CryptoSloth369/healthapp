@@ -48,7 +48,7 @@ export function DashboardView({
   /** Stored energy-model days from `start` through yesterday. */
   energyDays: BalanceDay[];
   /** Latest energy-model run and the one to compare it with. */
-  energy: { latest: RunRecord | null; previous: RunRecord | null };
+  energy: { latest: RunRecord | null; previous: RunRecord | null; error?: string };
   /** Current time (ISO), for "updated 3 min ago". */
   now: string;
 }) {
@@ -289,6 +289,7 @@ export function DashboardView({
         run={energy.latest}
         previous={energy.previous}
         updated={updated}
+        error={energy.error}
       />
 
       <section className={`${card} space-y-2`}>
@@ -575,6 +576,7 @@ function BalanceSection({
   run,
   previous,
   updated,
+  error,
 }: {
   bal: ReturnType<typeof summarizeBalance>;
   bars: BalanceBar[];
@@ -586,6 +588,7 @@ function BalanceSection({
   run: RunRecord | null;
   previous: RunRecord | null;
   updated: string;
+  error?: string;
 }) {
   const est = bal.estimatedDays + bal.partialDays > 0 ? "≈" : "";
   const plural = (n: number) => `${n} day${n === 1 ? "" : "s"}`;
@@ -601,6 +604,11 @@ function BalanceSection({
         <h2 className="font-semibold">Deficit &amp; surplus {weekly && <span className="text-sm font-normal text-muted">(weekly average)</span>}</h2>
         {hasProfile && <RecalculateButton />}
       </div>
+      {error && (
+        <p role="alert" className="rounded-xl border border-danger/40 px-3 py-2 text-xs text-danger">
+          Couldn&apos;t update these numbers: {error}
+        </p>
+      )}
       {hasProfile && (
         <p className="-mt-2 text-xs text-muted">
           {updated}
