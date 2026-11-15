@@ -1,10 +1,10 @@
 import Link from "next/link";
 import type { ProfileSummary } from "@/lib/profile";
 import type { WeightHistory } from "@/lib/weight";
-import { addDays, formatDay, parseDay } from "@/lib/dates";
+import { addDays, formatDay } from "@/lib/dates";
 import { adaptiveTdee, adherence, averages, dailyTotals, trendOn, weeklySummary } from "@/lib/analytics";
-import { ageOn, MIN_KCAL, tdee } from "@/lib/tdee";
-import { energyBalance, summarizeBalance, weeklyBalance, type BalanceDay, type BalanceWeek } from "@/lib/energy-balance";
+import { MIN_KCAL } from "@/lib/tdee";
+import { energyBalance, maintenanceFor, summarizeBalance, weeklyBalance, type BalanceDay, type BalanceWeek } from "@/lib/energy-balance";
 import { CalorieChart, type CalorieBar } from "@/components/calorie-chart";
 import { BalanceChart, type BalanceBar } from "@/components/balance-chart";
 import { HatchSwatch, SolidSwatch } from "@/components/chart-bits";
@@ -74,12 +74,7 @@ export function DashboardView({
   // Energy balance through yesterday (today is still in progress). Unlogged
   // days get intake back-calculated from the weight trend; every value keeps
   // its source so logged and estimated numbers stay distinguishable.
-  const p = summary.profile;
-  const maintenance =
-    p.sex && p.birth_date && p.height_in != null
-      ? (w: number) =>
-          tdee({ sex: p.sex!, weightLb: w, heightIn: Number(p.height_in), age: ageOn(parseDay(p.birth_date!), parseDay(today)), activity: p.activity_level })
-      : null;
+  const maintenance = maintenanceFor(summary.profile, today);
   const loggedKcal = new Map<string, number>();
   for (const e of entries) loggedKcal.set(e.eaten_on, (loggedKcal.get(e.eaten_on) ?? 0) + e.kcal);
   const balDays = energyBalance({

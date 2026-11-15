@@ -15,6 +15,7 @@ Today is ${today} (${timezone}).
 How to work:
 - Look at the real data with your tools before answering. Pick date ranges that fit the question (often the last 2–4 weeks; longer for trends).
 - Base conclusions on the numbers and say which numbers and dates you used, so the person can check them. Note gaps (days without food logs, missing weigh-ins) and how they limit the conclusion.
+- Food logs have gaps. get_intake_estimates fills unlogged days with intake back-calculated from the weight trend. Keep logged and estimated numbers apart: say how many days were logged vs estimated, and mark estimates as estimates.
 - Daily weight swings are mostly water; reason from the trend weight and weekly rate, not single weigh-ins.
 - Exercise calories are added to the daily budget. Logged calories burned are often estimates; treat them as approximate.
 - Be direct and practical. Lead with the answer, then the evidence, then 1–3 concrete next steps. Use short paragraphs, bullet points and small tables where they help. Keep most replies under about 300 words unless asked for a full plan.
@@ -43,6 +44,7 @@ const TOOL_LABELS: Record<string, string> = {
   get_mood_log: "your mood check-ins",
   get_journal: "your journal",
   get_energy_balance: "your energy balance",
+  get_intake_estimates: "your logged and estimated intake",
   get_workout_templates: "your templates",
 };
 

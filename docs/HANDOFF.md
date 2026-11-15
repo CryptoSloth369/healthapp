@@ -26,6 +26,7 @@ All ten planned steps are built and merged to `main`, which Vercel deploys to pr
 | Journal (Mood tab → Journal) with dictation; coach can read it | Done, deployed 2026-11-11 (migration `0005` applied) |
 | Dashboard (Trends) incl. adaptive TDEE | Done |
 | Back-calculated intake + deficit/surplus chart (logged vs. estimated kept separate) | Done, deployed 2026-11-15 (no migration) |
+| Coach access to back-calculated intake (`get_intake_estimates`) | Built on branch, awaiting owner review (no migration) |
 | Offline mode + push reminders | Done |
 | AI coach (chat over your data, approval-gated suggestions) | Done |
 | CSV / JSON export | Done |

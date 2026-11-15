@@ -3,6 +3,7 @@ import {
   balanceContextStart,
   balanceWindows,
   energyBalance,
+  maintenanceFor,
   summarizeBalance,
   trendAt,
   weeklyBalance,
@@ -170,5 +171,16 @@ describe("summaries", () => {
       ["2026-01-05", 1, 6],
       ["2026-01-12", 1, 6],
     ]);
+  });
+});
+
+describe("maintenanceFor", () => {
+  it("needs sex, birth date and height", () => {
+    expect(maintenanceFor({ sex: null, birth_date: "1990-01-01", height_in: 70, activity_level: "light" }, "2026-01-01")).toBeNull();
+  });
+  it("matches the formula TDEE at a given weight", () => {
+    const f = maintenanceFor({ sex: "male", birth_date: "1996-01-01", height_in: "70", activity_level: "sedentary" }, "2026-01-01")!;
+    // Mifflin–St Jeor, 30 y, 70 in, 200 lb: 10·90.72 + 6.25·177.8 − 150 + 5 = 1873.4; × 1.2
+    expect(f(200)).toBeCloseTo(2248, 0);
   });
 });

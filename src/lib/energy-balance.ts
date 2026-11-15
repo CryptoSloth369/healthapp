@@ -21,7 +21,8 @@
  *   window closed) can't be estimated; unlogged ones stay unknown.
  */
 import { daysBetween, type TrendPoint } from "./trend";
-import { KCAL_PER_LB } from "./tdee";
+import { ageOn, KCAL_PER_LB, tdee, type ActivityLevel, type Sex } from "./tdee";
+import { parseDay } from "./dates";
 
 export type IntakeSource = "logged" | "estimated";
 
@@ -91,6 +92,21 @@ export function trendAt(points: TrendPoint[], day: string): number | null {
     }
   }
   return points[points.length - 1].trend;
+}
+
+/**
+ * Formula maintenance (BMR × activity, no logged exercise) as a function of
+ * body weight, or null when the profile lacks sex, birth date or height.
+ */
+export function maintenanceFor(
+  p: { sex: Sex | null; birth_date: string | null; height_in: number | string | null; activity_level: ActivityLevel },
+  today: string,
+): ((weightLb: number) => number) | null {
+  if (!p.sex || !p.birth_date || p.height_in == null) return null;
+  const sex = p.sex;
+  const age = ageOn(parseDay(p.birth_date), parseDay(today));
+  const heightIn = Number(p.height_in);
+  return (weightLb) => tdee({ sex, weightLb, heightIn, age, activity: p.activity_level });
 }
 
 export function energyBalance(opts: {

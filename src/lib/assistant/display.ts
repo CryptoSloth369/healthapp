@@ -15,6 +15,7 @@ const LOOKED: Record<string, string> = {
   get_mood_log: "mood",
   get_journal: "journal",
   get_energy_balance: "energy balance",
+  get_intake_estimates: "logged and estimated intake",
   get_workout_templates: "templates",
 };
 
