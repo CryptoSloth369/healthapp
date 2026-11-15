@@ -18,8 +18,9 @@ Built one step at a time; each step is one commit on `main` (`git log --oneline`
 | 10 | **Extras:** USDA food search, barcode scanning (camera/photo/typed), CSV export and JSON backup | — |
 | 11 | **Journal:** free-form entries under Mood → Journal, dictation via the browser's speech recognition, day's mood shown with entries, coach `get_journal` tool, CSV export | `0005` |
 | — | **Back-calculated intake:** unlogged days estimated from the weight trend, Deficit & surplus card, logged vs estimated everywhere, coach `get_intake_estimates` | — |
+| 12 | **Energy model:** one stored algorithm for intake/burn/balance, personal burn calibrated from well-logged weeks (replaces adaptive TDEE), partial-day flags, confidence, running total, Recalculate button + rerun after saves and on stale reads | `0006` |
 
-## In progress: step 12, energy model
+## Step 12 details: energy model
 One algorithm (`runEnergyModel` in `src/lib/energy-balance.ts`) computes everything about intake and burn, saves the result, and reruns on its own.
 1. **Trend weight** from weigh-ins (unchanged).
 2. **Personal burn:** windows where most days are fully logged measure how far the formula maintenance is off; the average correction (last 90 days, at least 14 such days) is applied everywhere. This replaces the separate adaptive TDEE.
