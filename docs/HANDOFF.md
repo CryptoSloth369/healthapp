@@ -2,7 +2,16 @@
 
 The fastest way for a new person or AI agent to pick up this project. Read this, then [`CLAUDE.md`](../CLAUDE.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-_Last updated: 2026-11-11, after adding the journal._
+_Last updated: 2026-11-15, after adding the bigger-picture note._
+
+## Bigger picture
+_Added 2026-11-15._ This health app is the **first part of a larger personal "life app"**. The owner's goal is one app that helps them optimize their life by automating between the physical world and their digital life, and that lets them control as much of their digital life as possible from one place. Which areas come next (and when) isn't decided yet; record them here once it is.
+
+What this means for design decisions now:
+- **Keep areas separate.** A new area (like the journal) is its own section with its own tables, loaders and coach tools, not mixed into the health screens. The assistant reaches each area through tools, which is how it would later cover other parts of life.
+- **Keep the approval pattern.** The assistant suggests and the owner approves (`propose_*` tools and Apply cards). This matters more once the app acts on outside services (sending messages, paying, changing settings) and not just logging.
+- **Keep data private and per-user.** Every table has row-level security, and there's no service-role key. Outside data coming in should use the secure design in [`ROADMAP.md`](ROADMAP.md#long-term-device-data-apple-health-wearables) (a `security definer` function with a per-user token).
+- **Likely future building blocks** (not built): connections to outside services with securely stored keys, incoming events from those services, a history of every action taken on the owner's behalf (with undo where possible), and owner-defined "when X happens, do Y" rules with approval for anything risky.
 
 ## Where things stand
 All ten planned steps are built and merged to `main`, which Vercel deploys to production. See [`ROADMAP.md`](ROADMAP.md).
