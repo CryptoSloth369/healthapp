@@ -1,10 +1,13 @@
 import Link from "next/link";
 import type { ProfileSummary } from "@/lib/profile";
 import type { WeightHistory } from "@/lib/weight";
-import { addDays, formatDay } from "@/lib/dates";
+import { addDays, formatDay, parseDay } from "@/lib/dates";
 import { adaptiveTdee, adherence, averages, dailyTotals, trendOn, weeklySummary } from "@/lib/analytics";
-import { MIN_KCAL } from "@/lib/tdee";
+import { ageOn, MIN_KCAL, tdee } from "@/lib/tdee";
+import { energyBalance, summarizeBalance, weeklyBalance, type BalanceDay, type BalanceWeek } from "@/lib/energy-balance";
 import { CalorieChart, type CalorieBar } from "@/components/calorie-chart";
+import { BalanceChart, type BalanceBar } from "@/components/balance-chart";
+import { HatchSwatch, SolidSwatch } from "@/components/chart-bits";
 import { WeightChart } from "@/components/weight-chart";
 import { Meter } from "@/components/meter";
 import { card } from "@/components/ui";
@@ -28,6 +31,7 @@ export function DashboardView({
   entries,
   moods,
   workouts,
+  burned,
 }: {
   range: RangeKey;
   today: string;
@@ -36,6 +40,8 @@ export function DashboardView({
   entries: { eaten_on: string; kcal: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[];
   moods: MoodRow[];
   workouts: ExerciseSession[];
+  /** Exercise kcal by day, from the start of the loaded food range. */
+  burned: Record<string, number>;
 }) {
   const span = RANGES[range].days;
   const start = addDays(today, -(span - 1));
@@ -65,21 +71,80 @@ export function DashboardView({
     else break;
   }
 
+  // Energy balance through yesterday (today is still in progress). Unlogged
+  // days get intake back-calculated from the weight trend; every value keeps
+  // its source so logged and estimated numbers stay distinguishable.
+  const p = summary.profile;
+  const maintenance =
+    p.sex && p.birth_date && p.height_in != null
+      ? (w: number) =>
+          tdee({ sex: p.sex!, weightLb: w, heightIn: Number(p.height_in), age: ageOn(parseDay(p.birth_date!), parseDay(today)), activity: p.activity_level })
+      : null;
+  const loggedKcal = new Map<string, number>();
+  for (const e of entries) loggedKcal.set(e.eaten_on, (loggedKcal.get(e.eaten_on) ?? 0) + e.kcal);
+  const balDays = energyBalance({
+    start,
+    end: yesterday,
+    logged: loggedKcal,
+    exercise: new Map(Object.entries(burned)),
+    points,
+    maintenance,
+  });
+  const bal = summarizeBalance(balDays);
+  const todayKcal = loggedKcal.get(today);
+  const todayRow: BalanceDay = {
+    day: today,
+    intake: todayKcal ?? null,
+    source: todayKcal != null ? "logged" : null,
+    burn: null,
+    exercise: 0,
+    balance: null,
+    trend: null,
+    window: null,
+  };
+  const intakeDays = [...balDays, todayRow];
+  const intakeWeeks = new Map(weeklyBalance(intakeDays).map((w) => [w.weekStart, w]));
+  const weekLabel = (w: BalanceWeek) => `Week of ${formatDay(w.weekStart, { month: "short", day: "numeric" })}`;
+
   // Bars: daily for ≤ 12 weeks, weekly averages for 6 months.
   const weekly = weeklySummary(days, points);
-  const weeklyRows = weekly.filter((w) => w.loggedDays > 0 || w.trendEnd != null);
+  const weeklyRows = weekly.filter((w) => w.loggedDays > 0 || w.trendEnd != null || intakeWeeks.get(w.weekStart)?.avgIntake != null);
   const bars: CalorieBar[] =
     span <= 84
-      ? days.map((d) => ({ day: d.day, kcal: d.logged ? d.kcal : null }))
-      : [...weekly].reverse().map((w) => ({
+      ? intakeDays.map((d) => ({ day: d.day, kcal: d.intake, logged: d.source === "logged" ? 1 : 0, estimated: d.source === "estimated" ? 1 : 0 }))
+      : [...intakeWeeks.values()].map((w) => ({
           day: w.weekStart,
-          kcal: w.avgKcal,
-          label: `Week of ${formatDay(w.weekStart, { month: "short", day: "numeric" })}`,
+          kcal: w.avgIntake,
+          logged: w.loggedDays,
+          estimated: w.estimatedDays,
+          label: weekLabel(w),
         }));
+  const balanceBars: BalanceBar[] =
+    span <= 84
+      ? balDays.map((d) => ({
+          start: d.day,
+          end: d.day,
+          balance: d.balance,
+          intake: d.intake,
+          burn: d.burn,
+          logged: d.source === "logged" ? 1 : 0,
+          estimated: d.source === "estimated" ? 1 : 0,
+          windowDays: d.source === "estimated" ? d.window?.days : null,
+        }))
+      : weeklyBalance(balDays).map((w) => ({
+          start: w.weekStart < start ? start : w.weekStart,
+          end: w.lastDay,
+          balance: w.avgBalance,
+          intake: w.avgIntake,
+          burn: w.avgBurn,
+          logged: w.loggedDays,
+          estimated: w.estimatedDays,
+          label: `${weekLabel(w)} (daily avg)`,
+        }));
+  const weighedIn = new Set(points.map((pt) => pt.day));
+  const trendRows = balDays.map((d) => ({ day: d.day, trend: d.trend, weighedIn: weighedIn.has(d.day) }));
 
   // Exercise over the range.
-  const burnedByDay = new Map<string, number>();
-  for (const w of workouts) burnedByDay.set(w.performed_on, (burnedByDay.get(w.performed_on) ?? 0) + (w.kcal_burned ?? 0));
   const totalBurned = workouts.reduce((a, w) => a + (w.kcal_burned ?? 0), 0);
   const totalMinutes = workouts.reduce((a, w) => a + (w.duration_min ?? 0), 0);
   const byActivity = Object.entries(
@@ -94,13 +159,6 @@ export function DashboardView({
   ).sort((a, b) => b[1].n - a[1].n);
   const lifts = liftHistory(workouts.flatMap((w) => w.sets.map((s) => ({ ...s, day: w.performed_on }))));
   const prs = personalRecords(lifts);
-  // Average daily balance on days with food logged (excluding today): maintenance + exercise − eaten.
-  const maintenance = summary.target?.tdee ?? null;
-  const balanceDays = days.filter((d) => d.logged && d.day !== today);
-  const avgBalance =
-    maintenance != null && balanceDays.length
-      ? Math.round(balanceDays.reduce((a, d) => a + maintenance + (burnedByDay.get(d.day) ?? 0) - d.kcal, 0) / balanceDays.length)
-      : null;
 
   // Mood vs sleep, calories and tags over the range.
   const moodDays = dailyMood(moods.filter((m) => m.logged_on >= start));
@@ -150,12 +208,26 @@ export function DashboardView({
       </Link>
 
       <section className="grid grid-cols-2 gap-3">
-        <Tile
-          label="Avg intake"
-          value={avg ? `${avg.kcal.toLocaleString()}` : "—"}
-          unit={avg ? "kcal/day" : undefined}
-          sub={avg && target ? `${avg.kcal > target ? "+" : ""}${(avg.kcal - target).toLocaleString()} vs target` : "No food logged"}
-        />
+        {bal.estimatedDays > 0 ? (
+          <Tile
+            label="Avg intake"
+            value={`≈${bal.avgIntake!.toLocaleString()}`}
+            unit="kcal/day"
+            sub={[
+              bal.avgLoggedIntake != null && `Logged days ${bal.avgLoggedIntake.toLocaleString()}`,
+              `Est. days ${bal.avgEstimatedIntake!.toLocaleString()}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          />
+        ) : (
+          <Tile
+            label="Avg intake"
+            value={avg ? `${avg.kcal.toLocaleString()}` : "—"}
+            unit={avg ? "kcal/day" : undefined}
+            sub={avg && target ? `${avg.kcal > target ? "+" : ""}${(avg.kcal - target).toLocaleString()} vs target` : "No food logged"}
+          />
+        )}
         <Tile
           label="On target"
           value={adh && adh.logged ? `${Math.round((adh.onTarget / adh.logged) * 100)}%` : "—"}
@@ -185,21 +257,35 @@ export function DashboardView({
       <section className={`${card} space-y-2`}>
         <div className="flex flex-wrap items-baseline justify-between gap-x-3">
           <h2 className="font-semibold">Calories {span > 84 ? "(weekly average)" : "per day"}</h2>
+        </div>
+        <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted" aria-label="Legend">
+          <li className="flex items-center gap-1.5">
+            <SolidSwatch color="var(--series-trend)" />
+            Logged
+          </li>
+          {bal.estimatedDays > 0 && (
+            <li className="flex items-center gap-1.5">
+              <HatchSwatch id="cal-legend-hatch" color="var(--series-trend)" />
+              Estimated from weight
+            </li>
+          )}
           {target != null && (
-            <span className="flex items-center gap-1.5 text-xs text-muted">
+            <li className="flex items-center gap-1.5">
               <svg width="14" height="8" aria-hidden>
                 <path d="M1 4h12" stroke="var(--foreground)" strokeOpacity="0.6" strokeWidth="1" />
               </svg>
               Target {target.toLocaleString()}
-            </span>
+            </li>
           )}
-        </div>
-        {days.some((d) => d.logged) ? (
+        </ul>
+        {bars.some((b) => b.kcal != null) ? (
           <CalorieChart bars={bars} target={target} unit={span > 84 ? "week" : "day"} />
         ) : (
           <p className="py-8 text-center text-sm text-muted">No food logged in this range yet.</p>
         )}
       </section>
+
+      <BalanceSection bal={bal} bars={balanceBars} trend={trendRows} start={start} end={yesterday} weekly={span > 84} hasProfile={maintenance != null} />
 
       <section className={`${card} space-y-2`}>
         <h2 className="font-semibold">Weight</h2>
@@ -208,7 +294,9 @@ export function DashboardView({
 
       {avg && summary.daily && (
         <section className={`${card} space-y-3`}>
-          <h2 className="font-semibold">Average macros</h2>
+          <h2 className="font-semibold">
+            Average macros <span className="text-sm font-normal text-muted">(logged days)</span>
+          </h2>
           {(
             [
               ["Protein", avg.protein, summary.daily.macros.proteinG],
@@ -294,16 +382,6 @@ export function DashboardView({
             </p>
           </div>
         </div>
-        {avgBalance != null && (
-          <p className="rounded-xl bg-background px-3 py-2 text-sm">
-            Average daily {avgBalance >= 0 ? "deficit" : "surplus"}:{" "}
-            <span className="font-semibold">{Math.abs(avgBalance).toLocaleString()} kcal</span>
-            <span className="block text-xs text-muted">
-              Maintenance estimate + exercise − food, on {balanceDays.length} logged day{balanceDays.length === 1 ? "" : "s"} (≈{" "}
-              {Math.abs(Math.round(((avgBalance * 7) / 3500) * 10) / 10)} lb/week {avgBalance >= 0 ? "loss" : "gain"}).
-            </span>
-          </p>
-        )}
         {byActivity.length > 0 && (
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-muted">
@@ -444,25 +522,162 @@ export function DashboardView({
               <th className="py-1 font-normal">Week of</th>
               <th className="py-1 text-right font-normal">Avg kcal</th>
               <th className="py-1 text-right font-normal">Logged</th>
+              <th className="py-1 text-right font-normal">Balance</th>
               <th className="py-1 text-right font-normal">Trend</th>
               <th className="py-1 text-right font-normal">Δ</th>
             </tr>
           </thead>
           <tbody className="tabular-nums">
-            {weeklyRows.map((w) => (
+            {weeklyRows.map((w) => {
+              const b = intakeWeeks.get(w.weekStart);
+              const est = (b?.estimatedDays ?? 0) > 0 ? "≈" : "";
+              return (
               <tr key={w.weekStart} className="border-t border-border">
                 <td className="py-2">{formatDay(w.weekStart, { month: "short", day: "numeric" })}</td>
-                <td className="py-2 text-right">{w.avgKcal?.toLocaleString() ?? "—"}</td>
+                <td className="py-2 text-right">{b?.avgIntake == null ? "—" : `${est}${b.avgIntake.toLocaleString()}`}</td>
                 <td className="py-2 text-right text-muted">{w.loggedDays}/{w.days}</td>
+                <td className="py-2 text-right">
+                  {b?.avgBalance == null ? "—" : `${est}${b.avgBalance > 0 ? "+" : ""}${b.avgBalance.toLocaleString()}`}
+                </td>
                 <td className="py-2 text-right">{w.trendEnd?.toFixed(1) ?? "—"}</td>
                 <td className="py-2 text-right text-muted">
                   {w.trendChange == null ? "—" : `${w.trendChange > 0 ? "+" : ""}${w.trendChange.toFixed(1)}`}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
+        {weeklyRows.length > 0 && (
+          <p className="mt-2 text-xs text-muted">
+            Avg kcal covers logged and estimated days. ≈ means the week includes days estimated from weight. Balance is kcal/day
+            (− deficit, + surplus).
+          </p>
+        )}
       </section>
+    </div>
+  );
+}
+
+function BalanceSection({
+  bal,
+  bars,
+  trend,
+  start,
+  end,
+  weekly,
+  hasProfile,
+}: {
+  bal: ReturnType<typeof summarizeBalance>;
+  bars: BalanceBar[];
+  trend: { day: string; trend: number | null; weighedIn: boolean }[];
+  start: string;
+  end: string;
+  weekly: boolean;
+  hasProfile: boolean;
+}) {
+  const est = bal.estimatedDays > 0 ? "≈" : "";
+  const plural = (n: number) => `${n} day${n === 1 ? "" : "s"}`;
+  const split = (x: { logged: number; estimated: number }) =>
+    [x.logged && `${x.logged} logged`, x.estimated && `${x.estimated} est.`].filter(Boolean).join(", ") || "none";
+  return (
+    <section className={`${card} space-y-3`}>
+      <h2 className="font-semibold">Deficit &amp; surplus {weekly && <span className="text-sm font-normal text-muted">(weekly average)</span>}</h2>
+      {!hasProfile ? (
+        <p className="text-sm text-muted">
+          Add your sex, birth date and height in{" "}
+          <Link href="/profile" className="text-accent">
+            Profile
+          </Link>{" "}
+          to estimate how much you burn.
+        </p>
+      ) : (
+        <>
+          {bal.avgBalance != null ? (
+            <p>
+              <span className="text-3xl font-semibold">
+                {est}
+                {Math.abs(bal.avgBalance).toLocaleString()}
+              </span>{" "}
+              <span className="text-muted">
+                kcal/day {bal.avgBalance < 0 ? "deficit" : "surplus"} · {est}
+                {Math.abs(bal.lbPerWeek!).toFixed(1)} lb/week {bal.avgBalance < 0 ? "loss" : "gain"}
+              </span>
+            </p>
+          ) : (
+            <p className="text-sm text-muted">Log food or weigh in at least weekly to see your balance.</p>
+          )}
+
+          <Coverage bal={bal} />
+
+          {bal.avgBalance != null && (
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-xl bg-background px-3 py-2">
+                <p className="text-xs text-muted">Deficit days</p>
+                <p className="font-semibold">{bal.deficit.logged + bal.deficit.estimated}</p>
+                <p className="text-xs text-muted">{split(bal.deficit)}</p>
+              </div>
+              <div className="rounded-xl bg-background px-3 py-2">
+                <p className="text-xs text-muted">Surplus days</p>
+                <p className="font-semibold">{bal.surplus.logged + bal.surplus.estimated}</p>
+                <p className="text-xs text-muted">{split(bal.surplus)}</p>
+              </div>
+            </div>
+          )}
+
+          {trend.some((t) => t.trend != null) && <BalanceChart bars={bars} trend={trend} start={start} end={end} />}
+
+          <p className="text-xs text-muted">
+            On days you didn&apos;t log, intake is estimated from your weight trend: what you burned (formula maintenance +
+            logged exercise) plus the change in stored energy (3,500 kcal per lb), minus what you did log, spread evenly
+            over the unlogged days between weigh-ins (at least a week apart).{" "}
+            {bal.unknownDays > 0 && `${plural(bal.unknownDays)} can't be estimated yet (before your first weigh-in, or since your last full week of weigh-ins).`}{" "}
+            Through yesterday; partly logged days count as logged.
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** One bar showing how many days are logged, estimated or unknown. */
+function Coverage({ bal }: { bal: ReturnType<typeof summarizeBalance> }) {
+  const parts = [
+    { n: bal.loggedDays, label: "logged", bg: "var(--series-trend)" },
+    {
+      n: bal.estimatedDays,
+      label: "estimated",
+      bg: "repeating-linear-gradient(-45deg, var(--series-trend) 0 2px, color-mix(in srgb, var(--series-trend) 28%, transparent) 2px 5px)",
+    },
+    { n: bal.unknownDays, label: "unknown", bg: "var(--grid)" },
+  ].filter((pt) => pt.n > 0);
+  return (
+    <div className="space-y-1">
+      <div className="flex h-2.5 gap-0.5" aria-hidden>
+        {parts.map((pt) => (
+          <div key={pt.label} className="rounded-[2px]" style={{ flexGrow: pt.n, background: pt.bg }} />
+        ))}
+      </div>
+      <p className="flex flex-wrap gap-x-3 text-xs text-muted">
+        <span className="flex items-center gap-1.5">
+          <SolidSwatch color="var(--series-trend)" />
+          {bal.loggedDays} logged
+        </span>
+        <span className="flex items-center gap-1.5">
+          <HatchSwatch id="coverage-legend" color="var(--series-trend)" />
+          {bal.estimatedDays} estimated
+        </span>
+        {bal.unknownDays > 0 && (
+          <span className="flex items-center gap-1.5">
+            <SolidSwatch color="var(--grid)" />
+            {bal.unknownDays} unknown
+          </span>
+        )}
+        <span>
+          of {bal.days} days
+          {bal.loggedKcalShare != null && bal.estimatedDays > 0 && ` · ${Math.round(bal.loggedKcalShare * 100)}% of calories logged`}
+        </span>
+      </p>
     </div>
   );
 }

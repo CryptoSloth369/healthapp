@@ -1,21 +1,29 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { formatDay } from "@/lib/dates";
+import { barPath, HatchPattern } from "./chart-bits";
 
-export type CalorieBar = { day: string; kcal: number | null; label?: string }; // null = nothing logged
+/**
+ * kcal = null: nothing logged or estimated. `logged`/`estimated` count the days
+ * behind the bar (1/0 or 0/1 for a single day; up to 7 for a weekly average).
+ */
+export type CalorieBar = { day: string; kcal: number | null; logged: number; estimated: number; label?: string };
 
 const HEIGHT = 200;
 const M = { top: 14, right: 8, bottom: 24, left: 40 };
 
 /**
  * Columns of calories per day (or per week), with the target as a reference
- * line. Unlogged periods are left empty rather than drawn as zero.
+ * line. Logged calories are solid; calories back-calculated from weight are
+ * hatched (a weekly bar is split by its share of logged days). Unknown periods
+ * are left empty rather than drawn as zero.
  */
 export function CalorieChart({ bars, target, unit }: { bars: CalorieBar[]; target: number | null; unit: string }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(360);
   const [hover, setHover] = useState<number | null>(null);
+  const hatchId = `hatch-${useId().replace(/:/g, "")}`;
 
   useLayoutEffect(() => {
     const el = wrapRef.current;
@@ -74,16 +82,26 @@ export function CalorieChart({ bars, target, unit }: { bars: CalorieBar[]; targe
           </g>
         ))}
 
+        <defs>
+          <HatchPattern id={hatchId} color="var(--series-trend)" />
+        </defs>
         {bars.map((b, i) => {
           if (b.kcal == null || b.kcal <= 0) return null;
-          const top = g.y(b.kcal);
-          const h = base - top;
-          const r = Math.min(4, g.bw / 2, h);
-          // Rounded data-end, square at the baseline.
           const x0 = g.x(i);
           const x1 = x0 + g.bw;
-          const d = `M${x0},${base}V${top + r}Q${x0},${top} ${x0 + r},${top}H${x1 - r}Q${x1},${top} ${x1},${top + r}V${base}Z`;
-          return <path key={b.day} d={d} fill="var(--series-trend)" opacity={hover == null || hover === i ? 1 : 0.55} />;
+          const top = g.y(b.kcal);
+          const share = b.logged / Math.max(1, b.logged + b.estimated);
+          // Solid (logged) from the baseline, hatched (estimated) above it, with a 2px gap between.
+          const split = base - (base - top) * share;
+          const op = hover == null || hover === i ? 1 : 0.55;
+          return (
+            <g key={b.day} opacity={op}>
+              {share > 0 && <path d={barPath(x0, x1, base, share < 1 ? split : top, share >= 1)} fill="var(--series-trend)" />}
+              {share < 1 && (share > 0 ? split - 2 : base) - top > 0.5 && (
+                <path d={barPath(x0, x1, share > 0 ? split - 2 : base, top, true)} fill={`url(#${hatchId})`} />
+              )}
+            </g>
+          );
         })}
 
         {target != null && (
@@ -108,15 +126,24 @@ export function CalorieChart({ bars, target, unit }: { bars: CalorieBar[]; targe
         >
           <p className="text-muted">{hb.label ?? formatDay(hb.day)}</p>
           {hb.kcal == null ? (
-            <p className="text-muted">Not logged</p>
+            <p className="text-muted">No data</p>
           ) : (
-            <p className="flex items-center gap-1.5">
-              <svg width="10" height="10" aria-hidden>
-                <rect width="10" height="10" rx="2" fill="var(--series-trend)" />
-              </svg>
-              <strong className="tabular-nums">{hb.kcal.toLocaleString()}</strong>
-              <span className="text-muted">kcal{unit === "week" ? "/day avg" : ""}</span>
-            </p>
+            <>
+              <p>
+                <strong className="tabular-nums">
+                  {hb.estimated > 0 ? "≈" : ""}
+                  {hb.kcal.toLocaleString()}
+                </strong>{" "}
+                <span className="text-muted">kcal{unit === "week" ? "/day avg" : ""}</span>
+              </p>
+              <p className="text-muted">
+                {unit === "week"
+                  ? [hb.logged && `${hb.logged} logged`, hb.estimated && `${hb.estimated} est.`].filter(Boolean).join(" · ") + " days"
+                  : hb.logged
+                    ? "Logged"
+                    : "Estimated from weight"}
+              </p>
+            </>
           )}
           {hb.kcal != null && target != null && (
             <p className="text-muted tabular-nums">

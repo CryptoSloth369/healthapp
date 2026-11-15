@@ -2,7 +2,7 @@
 
 The fastest way for a new person or AI agent to pick up this project. Read this, then [`CLAUDE.md`](../CLAUDE.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-_Last updated: 2026-11-11, after adding the journal._
+_Last updated: 2026-11-15, after adding back-calculated intake (deficit & surplus)._
 
 ## Where things stand
 All ten planned steps are built and merged to `main`, which Vercel deploys to production. See [`ROADMAP.md`](ROADMAP.md).
@@ -16,6 +16,7 @@ All ten planned steps are built and merged to `main`, which Vercel deploys to pr
 | Mood tracker + insights | Done |
 | Journal (Mood tab → Journal) with dictation; coach can read it | Done, deployed 2026-11-11 (migration `0005` applied) |
 | Dashboard (Trends) incl. adaptive TDEE | Done |
+| Back-calculated intake + deficit/surplus chart (logged vs. estimated kept separate) | Built on branch, awaiting owner review (no migration) |
 | Offline mode + push reminders | Done |
 | AI coach (chat over your data, approval-gated suggestions) | Done |
 | CSV / JSON export | Done |
