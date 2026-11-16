@@ -600,7 +600,7 @@ function BalanceSection({
   const changes = run && previous ? runChanges(run, previous) : [];
   return (
     <section className={`${card} space-y-3`}>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
         <h2 className="font-semibold">Deficit &amp; surplus {weekly && <span className="text-sm font-normal text-muted">(weekly average)</span>}</h2>
         {hasProfile && <RecalculateButton />}
       </div>
