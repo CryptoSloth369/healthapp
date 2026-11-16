@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const { createLinkToken, exchangePublicToken, getAccounts, PlaidError, removeItem } = await import("./plaid");
+const { createLinkToken, exchangePublicToken, getAccounts, PlaidError, removeItem, syncTransactions } = await import("./plaid");
 
 type Call = { url: string; headers: Record<string, string>; body: Record<string, unknown> };
 let calls: Call[] = [];
 let reply: { status: number; json: unknown } = { status: 200, json: {} };
+/** When set, each call takes the next reply from this list. */
+let replies: { status: number; json: unknown }[] | null = null;
 
 beforeEach(() => {
   calls = [];
@@ -15,10 +17,12 @@ beforeEach(() => {
   vi.stubEnv("PLAID_REDIRECT_URI", "");
   vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
     calls.push({ url, headers: init.headers as Record<string, string>, body: JSON.parse(String(init.body)) });
-    return new Response(JSON.stringify(reply.json), { status: reply.status });
+    const r = replies ? replies.shift()! : reply;
+    return new Response(JSON.stringify(r.json), { status: r.status });
   });
 });
 afterEach(() => {
+  replies = null;
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
@@ -92,5 +96,41 @@ describe("Plaid client", () => {
   it("explains a missing client id", async () => {
     vi.stubEnv("PLAID_CLIENT_ID", "");
     await expect(createLinkToken({ userId: "u", type: "bank" })).rejects.toThrow(/PLAID_CLIENT_ID/);
+  });
+});
+
+describe("syncTransactions", () => {
+  const page = (added: string[], next: string, more: boolean, removed: string[] = []) => ({
+    status: 200,
+    json: {
+      added: added.map((id) => ({ transaction_id: id, account_id: "a", amount: 5, date: "2026-11-01", name: id })),
+      modified: [],
+      removed: removed.map((transaction_id) => ({ transaction_id, account_id: "a" })),
+      next_cursor: next,
+      has_more: more,
+      request_id: "r",
+    },
+  });
+
+  it("pages until has_more is false, passing the cursor along", async () => {
+    replies = [page(["t1", "t2"], "c1", true), page(["t3"], "c2", false, ["old"])];
+    const r = await syncTransactions("access-1", null);
+    expect(r.added.map((t) => t.transaction_id)).toEqual(["t1", "t2", "t3"]);
+    expect(r.removed).toEqual(["old"]);
+    expect(r.cursor).toBe("c2");
+    expect(calls[0].body).not.toHaveProperty("cursor");
+    expect(calls[1].body).toMatchObject({ cursor: "c1", count: 500 });
+  });
+
+  it("restarts from the original cursor when data changes mid-paging", async () => {
+    const mutation = {
+      status: 400,
+      json: { error_code: "TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION", error_type: "TRANSACTIONS_ERROR", error_message: "retry", request_id: "r" },
+    };
+    replies = [page(["t1"], "c1", true), mutation, page(["t1", "t2"], "c9", false)];
+    const r = await syncTransactions("access-1", "c0");
+    expect(r.added.map((t) => t.transaction_id)).toEqual(["t1", "t2"]);
+    expect(r.cursor).toBe("c9");
+    expect(calls.map((c) => c.body.cursor)).toEqual(["c0", "c1", "c0"]);
   });
 });

@@ -71,7 +71,7 @@ In **Profile**, fill in your stats and goal, and set **Activity level** to how a
 4. On the iPhone, from the home-screen app: **Profile → Reminders → Turn on notifications → Send a test**.
 
 ### 5. Money (Plaid, families)
-1. Run migration [`0007_money.sql`](supabase/migrations/0007_money.sql) in the SQL Editor.
+1. Run migrations [`0007_money.sql`](supabase/migrations/0007_money.sql) and [`0010_spending.sql`](supabase/migrations/0010_spending.sql) in the SQL Editor.
 2. **Invite-only sign-up:** Supabase → **Authentication → Hooks → Before User Created** → type *Postgres*, function `public.hook_require_invite` → enable. Then **Authentication → Sign In / Providers → allow new users to sign up** (the hook rejects anyone without an invite). Optional: turn off **Confirm email** so invited people are signed in right away; if it stays on, set **URL Configuration → Site URL** to your Vercel URL and add `https://YOUR-APP.vercel.app/auth/callback` to the redirect URLs.
 3. **Plaid:** sign up at dashboard.plaid.com. Under **Developers → Keys**, copy the client ID and the **Sandbox** secret.
 4. **Vercel env:** `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV=sandbox`, and `FINANCE_TOKEN_KEY` (generate with `openssl rand -base64 32`; never change it once banks are connected). Redeploy.

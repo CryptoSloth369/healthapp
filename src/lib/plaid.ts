@@ -127,3 +127,49 @@ export async function getAccounts(accessToken: string) {
 export async function removeItem(accessToken: string) {
   await call("/item/remove", { access_token: accessToken }, z.object({ request_id: z.string() }).passthrough());
 }
+
+const Transaction = z.object({
+  transaction_id: z.string(),
+  account_id: z.string(),
+  amount: z.number(),
+  date: z.string(),
+  name: z.string().nullish(),
+  merchant_name: z.string().nullish(),
+  pending: z.boolean().nullish(),
+  personal_finance_category: z.object({ primary: z.string(), detailed: z.string() }).passthrough().nullish(),
+});
+export type PlaidTransaction = z.infer<typeof Transaction>;
+
+const SyncPage = z.object({
+  added: z.array(Transaction),
+  modified: z.array(Transaction),
+  removed: z.array(z.object({ transaction_id: z.string() }).passthrough()),
+  next_cursor: z.string(),
+  has_more: z.boolean(),
+});
+
+/**
+ * All transaction changes since `cursor` (null = everything Plaid has).
+ * If the data changes while paging, Plaid asks us to restart from the
+ * original cursor; we try up to 3 times.
+ */
+export async function syncTransactions(accessToken: string, cursor: string | null) {
+  for (let attempt = 0; ; attempt++) {
+    const out = { added: [] as PlaidTransaction[], modified: [] as PlaidTransaction[], removed: [] as string[], cursor };
+    try {
+      for (;;) {
+        const body: Record<string, unknown> = { access_token: accessToken, count: 500 };
+        if (out.cursor) body.cursor = out.cursor;
+        const page = await call("/transactions/sync", body, SyncPage);
+        out.added.push(...page.added);
+        out.modified.push(...page.modified);
+        out.removed.push(...page.removed.map((r) => r.transaction_id));
+        out.cursor = page.next_cursor;
+        if (!page.has_more) return out;
+      }
+    } catch (err) {
+      if (err instanceof PlaidError && err.code === "TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION" && attempt < 2) continue;
+      throw err;
+    }
+  }
+}

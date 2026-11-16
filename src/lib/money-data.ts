@@ -3,8 +3,9 @@ import { createClient, getUserId } from "@/lib/supabase/server";
 import { dbError, readAll } from "@/lib/supabase/read-all";
 import { ensureHouseholdId } from "@/lib/family-data";
 import { open, seal } from "@/lib/secret-box";
-import { CONNECTION_PRODUCTS, exchangePublicToken, getAccounts, PlaidError, removeItem, type ConnectionType } from "@/lib/plaid";
-import { accountRowFromPlaid, isSyncDue } from "@/lib/finance-sync";
+import { CONNECTION_PRODUCTS, exchangePublicToken, getAccounts, PlaidError, removeItem, syncTransactions, type ConnectionType } from "@/lib/plaid";
+import { accountRowFromPlaid, isSyncDue, txnRows } from "@/lib/finance-sync";
+import { chunks } from "@/lib/supabase/read-all";
 import type { AccountKind, BalancePoint } from "@/lib/finance";
 
 export type AccountView = {
@@ -85,7 +86,17 @@ export async function getBalanceHistory(since: string): Promise<BalancePoint[]> 
 }
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
-type ItemRow = { id: string; household_id: string; owner_user_id: string; access_token_enc: string; status: string; last_synced_at: string | null };
+type ItemRow = {
+  id: string;
+  household_id: string;
+  owner_user_id: string;
+  access_token_enc: string;
+  status: string;
+  last_synced_at: string | null;
+  products: string[];
+  txn_cursor: string | null;
+};
+const ITEM_COLS = "id, household_id, owner_user_id, access_token_enc, status, last_synced_at, products, txn_cursor";
 
 /**
  * Refresh one connection's accounts from Plaid and record today's balances.
@@ -94,7 +105,8 @@ type ItemRow = { id: string; household_id: string; owner_user_id: string; access
  */
 async function syncItem(supabase: Supabase, item: ItemRow, userId: string, today: string) {
   try {
-    const { accounts } = await getAccounts(open(item.access_token_enc));
+    const accessToken = open(item.access_token_enc);
+    const { accounts } = await getAccounts(accessToken);
     const rows = accounts.map(accountRowFromPlaid);
     const { data: existing, error } = await supabase
       .from("fin_account")
@@ -127,7 +139,24 @@ async function syncItem(supabase: Supabase, item: ItemRow, userId: string, today
       const { error: e } = await supabase.from("fin_balance").upsert(snaps, { onConflict: "account_id,day" });
       if (e) throw dbError("Saving balances", e);
     }
-    await supabase.from("fin_item").update({ status: "ok", error: null, last_synced_at: now }).eq("id", item.id);
+    // Transactions: only the connection's owner downloads them, so private
+    // accounts (which family members can't see) never get skipped.
+    let txnCursor = item.txn_cursor;
+    if (item.owner_user_id === userId && item.products.includes("transactions")) {
+      const changes = await syncTransactions(accessToken, item.txn_cursor);
+      const rows = txnRows([...changes.added, ...changes.modified], idByPlaid);
+      for (const part of chunks(rows, 500)) {
+        const { error: e } = await supabase.from("fin_transaction").upsert(part, { onConflict: "plaid_transaction_id" });
+        if (e) throw dbError("Saving transactions", e);
+      }
+      for (const part of chunks(changes.removed, 200)) {
+        const { error: e } = await supabase.from("fin_transaction").delete().in("plaid_transaction_id", part);
+        if (e) throw dbError("Removing transactions", e);
+      }
+      // Advance the bookmark only after everything is saved.
+      txnCursor = changes.cursor;
+    }
+    await supabase.from("fin_item").update({ status: "ok", error: null, last_synced_at: now, txn_cursor: txnCursor }).eq("id", item.id);
     return null;
   } catch (err) {
     const loginRequired = err instanceof PlaidError && err.loginRequired;
@@ -152,7 +181,7 @@ export async function syncMoney(opts: { today: string; force?: boolean }): Promi
   const supabase = await createClient();
   const { data: items, error } = await supabase
     .from("fin_item")
-    .select("id, household_id, owner_user_id, access_token_enc, status, last_synced_at")
+    .select(ITEM_COLS)
     .overrideTypes<ItemRow[], { merge: false }>();
   if (error) throw dbError("Reading connections", error);
   const now = new Date();
@@ -185,7 +214,7 @@ export async function connectItem(opts: { publicToken: string; institutionId: st
       institution_name: opts.institutionName,
       products: CONNECTION_PRODUCTS[opts.type],
     })
-    .select("id, household_id, owner_user_id, access_token_enc, status, last_synced_at")
+    .select(ITEM_COLS)
     .single<ItemRow>();
   if (error) {
     // Don't leave a paid connection behind that we can't use.

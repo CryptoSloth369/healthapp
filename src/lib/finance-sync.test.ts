@@ -36,3 +36,41 @@ describe("isSyncDue", () => {
     expect(isSyncDue("2026-11-16T07:00:00Z", now)).toBe(false);
   });
 });
+
+describe("txnRows", () => {
+  it("maps Plaid transactions to our accounts and skips unknown accounts", async () => {
+    const { txnRows } = await import("./finance-sync");
+    const rows = txnRows(
+      [
+        {
+          transaction_id: "t1",
+          account_id: "plaid-card",
+          amount: 89.4,
+          date: "2026-11-12",
+          name: "SQ *BLUE BOTTLE",
+          merchant_name: "Blue Bottle Coffee",
+          pending: true,
+          personal_finance_category: { primary: "FOOD_AND_DRINK", detailed: "FOOD_AND_DRINK_COFFEE", confidence_level: "VERY_HIGH" },
+        },
+        { transaction_id: "t2", account_id: "someone-elses", amount: 1, date: "2026-11-12", name: "x" },
+        { transaction_id: "t3", account_id: "plaid-card", amount: -500, date: "2026-11-13", name: null, merchant_name: null },
+      ],
+      new Map([["plaid-card", "uuid-card"]]),
+    );
+    expect(rows).toEqual([
+      {
+        account_id: "uuid-card",
+        plaid_transaction_id: "t1",
+        day: "2026-11-12",
+        amount: 89.4,
+        name: "SQ *BLUE BOTTLE",
+        merchant_name: "Blue Bottle Coffee",
+        pending: true,
+        pfc_primary: "FOOD_AND_DRINK",
+        pfc_detailed: "FOOD_AND_DRINK_COFFEE",
+      },
+      expect.objectContaining({ plaid_transaction_id: "t3", name: "Transaction", pending: false, pfc_primary: null }),
+    ]);
+    expect(rows[0]).not.toHaveProperty("category_override");
+  });
+});

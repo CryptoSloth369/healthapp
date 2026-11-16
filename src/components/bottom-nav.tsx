@@ -14,9 +14,10 @@ const HEALTH_TABS: Tab[] = [
   { href: "/dashboard", label: "Trends", icon: "M4 20V10M10 20V4M16 20v-7M22 20H2" },
 ];
 
-// Spending and Budget join these when they're built (roadmap steps 14 and 16).
+// Budget joins these in roadmap step 16.
 const MONEY_TABS: Tab[] = [
   { href: "/money", label: "Overview", icon: "M4 20V10M10 20V4M16 20v-7M22 20H2" },
+  { href: "/money/spending", label: "Spending", icon: "M12 3v9h9M21 12a9 9 0 11-9-9" },
   { href: "/money/accounts", label: "Accounts", icon: "M3 10h18M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18M12 3l9 5H3z" },
   { href: "/money/family", label: "Family", icon: "M9 11a4 4 0 100-8 4 4 0 000 8zM2 21v-1a6 6 0 0112 0v1M17 11a3 3 0 100-6M22 21v-1a5 5 0 00-4-4.9" },
 ];

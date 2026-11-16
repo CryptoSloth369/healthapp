@@ -2,7 +2,7 @@
 
 The fastest way for a new person or AI agent to pick up this project. Read this, then [`CLAUDE.md`](../CLAUDE.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-_Last updated: 2026-11-16, after building Money step 13 (families, Plaid accounts, net worth)._
+_Last updated: 2026-11-16, after building Money step 14 (spending)._
 
 ## Bigger picture
 _Added 2026-11-15._ This health app is the **first part of a larger personal "life app"**. The owner's goal is one app that helps them optimize their life by automating between the physical world and their digital life, and that lets them control as much of their digital life as possible from one place. Which areas come next (and when) isn't decided yet; record them here once it is.
@@ -28,8 +28,9 @@ All ten planned steps are built and merged to `main`, which Vercel deploys to pr
 | Back-calculated intake + deficit/surplus chart (logged vs. estimated kept separate) | Done, deployed 2026-11-15 (no migration) |
 | Coach access to back-calculated intake (`get_intake_estimates`) | Done, deployed 2026-11-15 (no migration) |
 | Energy model (step 12): one stored algorithm, personal burn, partial days, confidence, running total, Recalculate button + auto rerun | Done, deployed 2026-11-15 (migration `0006` applied) |
-| Dream journal (Mood → Dreams): own `kind` on journal entries, dream tags, coach can filter by kind and sees tags, export includes both | Built on branch; migrations `0008` and `0009` applied 2026-11-17 |
-| Money step 13: Health / Money switch, families + invite-only sign-up, Plaid connect, manual accounts, net worth | Built on branch; needs migration `0007`, the sign-up hook and Plaid env vars (README → Setup step 5) |
+| Dream journal (Mood → Dreams): own `kind` on journal entries, dream tags, coach can filter by kind and sees tags, export includes both | Deployed; migrations `0008` and `0009` applied 2026-11-17 |
+| Money step 13: Health / Money switch, families + invite-only sign-up, Plaid connect, manual accounts, net worth | Deployed 2026-11-16 (migration `0007` applied); Plaid env vars set 2026-11-18; sign-up hook pending (README → Setup step 5) |
+| Money step 14: card transactions, categories + rules, spending donut | Built on branch; needs migration `0010` **before** deploying (sync writes transactions) |
 | Offline mode + push reminders | Done |
 | AI coach (chat over your data, approval-gated suggestions) | Done |
 | CSV / JSON export | Done |
@@ -53,7 +54,7 @@ When one of these misbehaves, the useful evidence is a screenshot plus, for serv
 ## Production setup checklist (owner's account)
 Tick as done. The full steps are in the [README](../README.md#setup-from-scratch).
 
-- [ ] Supabase migrations run in order: `0001` · `0002` · `0003` · `0004` · `0005` · `0006` · `0007` · `0008` · `0009`
+- [ ] Supabase migrations run in order: `0001` · `0002` · `0003` · `0004` · `0005` · `0006` · `0007` · `0008` · `0009` · `0010`
 - [ ] User created after `0001`
 - [ ] Before User Created hook → `hook_require_invite` enabled, then sign-ups allowed (invite-only from then on)
 - [ ] Vercel env: `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`, `FINANCE_TOKEN_KEY` (+ `PLAID_REDIRECT_URI` for production)

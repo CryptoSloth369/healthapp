@@ -17,6 +17,16 @@
   /* Energy balance: deficit (blue) vs surplus (orange), validated as a pair on --surface. */
   --series-deficit: #3987e5;
   --series-surplus: #d9652f;
+  /* Spending categories, by rank in the donut (validated adjacent-pair order); the rest is neutral. */
+  --cat-1: #3987e5;
+  --cat-2: #d95926;
+  --cat-3: #199e70;
+  --cat-4: #c98500;
+  --cat-5: #d55181;
+  --cat-6: #0ca30c;
+  --cat-7: #9085e9;
+  --cat-8: #e66767;
+  --cat-rest: #5b6270;
   --grid: #262b33;
   /* Mood 1→5, one blue hue (validated ordinal ramp; brighter = better on dark). */
   --mood-1: #184f95;
@@ -47,6 +57,15 @@
     --series-raw: #1baf7a;
     --series-deficit: #2a78d6;
     --series-surplus: #d0582a;
+    --cat-1: #2a78d6;
+    --cat-2: #eb6834;
+    --cat-3: #1baf7a;
+    --cat-4: #eda100;
+    --cat-5: #e87ba4;
+    --cat-6: #008300;
+    --cat-7: #6250d6;
+    --cat-8: #e34948;
+    --cat-rest: #a3a9b3;
     --grid: #e6e8ec;
     /* Darker = better on light. */
     --mood-1: #86b6ef;
