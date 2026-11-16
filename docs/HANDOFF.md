@@ -2,7 +2,7 @@
 
 The fastest way for a new person or AI agent to pick up this project. Read this, then [`CLAUDE.md`](../CLAUDE.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-_Last updated: 2026-11-15, after building the energy model (step 12)._
+_Last updated: 2026-11-16, after building Money step 13 (families, Plaid accounts, net worth)._
 
 ## Bigger picture
 _Added 2026-11-15._ This health app is the **first part of a larger personal "life app"**. The owner's goal is one app that helps them optimize their life by automating between the physical world and their digital life, and that lets them control as much of their digital life as possible from one place. Which areas come next (and when) isn't decided yet; record them here once it is.
@@ -28,6 +28,7 @@ All ten planned steps are built and merged to `main`, which Vercel deploys to pr
 | Back-calculated intake + deficit/surplus chart (logged vs. estimated kept separate) | Done, deployed 2026-11-15 (no migration) |
 | Coach access to back-calculated intake (`get_intake_estimates`) | Done, deployed 2026-11-15 (no migration) |
 | Energy model (step 12): one stored algorithm, personal burn, partial days, confidence, running total, Recalculate button + auto rerun | Done, deployed 2026-11-15 (migration `0006` applied) |
+| Money step 13: Health / Money switch, families + invite-only sign-up, Plaid connect, manual accounts, net worth | Built on branch; needs migration `0007`, the sign-up hook and Plaid env vars (README → Setup step 5) |
 | Offline mode + push reminders | Done |
 | AI coach (chat over your data, approval-gated suggestions) | Done |
 | CSV / JSON export | Done |
@@ -45,11 +46,17 @@ Everything has unit tests (`npm test`) and was exercised in a headless iPhone-si
 
 When one of these misbehaves, the useful evidence is a screenshot plus, for server issues, Vercel → Deployments → Functions logs. Claude API failures show Anthropic's reason in the app and log the status, request id and error body. For reminders, run the SQL checks in [`supabase/reminders-schedule.sql`](../supabase/reminders-schedule.sql).
 
+- [ ] **Plaid end to end** in sandbox (`user_good` / `pass_good`), then with a real bank after Production approval. The build sandbox can't reach Plaid; the client was tested against a fake server.
+- [ ] **Invite sign-up** end to end, including the confirmation email if "Confirm email" stays on.
+
 ## Production setup checklist (owner's account)
 Tick as done. The full steps are in the [README](../README.md#setup-from-scratch).
 
-- [ ] Supabase migrations run in order: `0001` · `0002` · `0003` · `0004` · `0005` · `0006`
-- [ ] User created after `0001`; public sign-ups disabled
+- [ ] Supabase migrations run in order: `0001` · `0002` · `0003` · `0004` · `0005` · `0006` · `0007`
+- [ ] User created after `0001`
+- [ ] Before User Created hook → `hook_require_invite` enabled, then sign-ups allowed (invite-only from then on)
+- [ ] Vercel env: `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`, `FINANCE_TOKEN_KEY` (+ `PLAID_REDIRECT_URI` for production)
+- [ ] Vercel → Environment Variables: Supabase URL + key also ticked for **Preview** (otherwise branch preview builds fail)
 - [ ] Vercel env: Supabase URL + publishable key
 - [x] Vercel env: `ANTHROPIC_API_KEY` (and the Anthropic account has credits; with none, every Claude call fails with a 400)
 - [ ] Vercel env: `USDA_API_KEY` (optional; otherwise DEMO_KEY rate limits)

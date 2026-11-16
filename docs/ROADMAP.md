@@ -20,6 +20,20 @@ Built one step at a time; each step is one commit on `main` (`git log --oneline`
 | — | **Back-calculated intake:** unlogged days estimated from the weight trend, Deficit & surplus card, logged vs estimated everywhere, coach `get_intake_estimates` | — |
 | 12 | **Energy model:** one stored algorithm for intake/burn/balance, personal burn calibrated from well-logged weeks (replaces adaptive TDEE), partial-day flags, confidence, running total, Recalculate button + rerun after saves and on stale reads | `0006` |
 
+## Next: Money (steps 13–16)
+Decided 2026-11-16. A second area of the life app, beside Health, switched with a Health / Money control at the top; each area has its own bottom tabs.
+
+- **Accounts come from Plaid** (pay-as-you-go; built and tested in Plaid's free sandbox first). Three connect buttons so each connection is billed only for what it needs: *Bank or card* (Transactions), *Investments* (Investments), *Loans* (Liabilities). Manual accounts cover anything Plaid can't reach (home, car, cash).
+- **Families:** new people sign up only through a one-time **invite link** (no open sign-up: strangers would run up the Anthropic and Plaid bills). A Supabase "before user created" hook rejects sign-ups without a valid invite. Accepting an invite joins the inviter's family. **Money is shared per account** ("Share with family", on by default); **health data stays private** to each person. Budgets are per family.
+- **Security:** read-only access, no money movement. Plaid access tokens are encrypted (AES-256-GCM, key in a server env var) and never sent to the browser. Data refreshes when Money is opened (if older than a few hours) and from a Sync button; no webhooks, because the app has no service-role key.
+
+| Step | Scope | Migration |
+|---|---|---|
+| 13 | **Foundations:** Health / Money switch; families, invites, invite-only sign-up; Plaid connect + manual accounts; balances; totals (cash, liquid investments, retirement / non-liquid, other assets, debt by type, net worth); daily balance snapshots and a net-worth chart | `0007` |
+| 14 | **Spending:** card transactions via Transactions Sync; Plaid categories with your own renames and merchant rules; donut of top categories + Other with a ranked list, by month and card; transfers and card payments excluded | `0008` |
+| 15 | **Coach:** read-only tools for accounts, net worth, spending and budget; proposals for budget changes with Apply cards | — |
+| 16 | **Budget (YNAB-style):** Ready to Assign = cash − assigned; monthly category budgets (assigned / activity / available) fed by card spending; goals with target amount and date, funded from Ready to Assign | `0009` |
+
 ## Step 12 details: energy model
 One algorithm (`runEnergyModel` in `src/lib/energy-balance.ts`) computes everything about intake and burn, saves the result, and reruns on its own.
 1. **Trend weight** from weigh-ins (unchanged).

@@ -70,6 +70,15 @@ In **Profile**, fill in your stats and goal, and set **Activity level** to how a
 3. Fill your app URL and `CRON_SECRET` into a copy of [`supabase/reminders-schedule.sql`](supabase/reminders-schedule.sql) and run it. **Don't commit the filled-in copy.**
 4. On the iPhone, from the home-screen app: **Profile → Reminders → Turn on notifications → Send a test**.
 
+### 5. Money (Plaid, families)
+1. Run migration [`0007_money.sql`](supabase/migrations/0007_money.sql) in the SQL Editor.
+2. **Invite-only sign-up:** Supabase → **Authentication → Hooks → Before User Created** → type *Postgres*, function `public.hook_require_invite` → enable. Then **Authentication → Sign In / Providers → allow new users to sign up** (the hook rejects anyone without an invite). Optional: turn off **Confirm email** so invited people are signed in right away; if it stays on, set **URL Configuration → Site URL** to your Vercel URL and add `https://YOUR-APP.vercel.app/auth/callback` to the redirect URLs.
+3. **Plaid:** sign up at dashboard.plaid.com. Under **Developers → Keys**, copy the client ID and the **Sandbox** secret.
+4. **Vercel env:** `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV=sandbox`, and `FINANCE_TOKEN_KEY` (generate with `openssl rand -base64 32`; never change it once banks are connected). Redeploy.
+5. **Try it with fake banks:** Money → Accounts → *Bank or credit card* → pick any bank → username `user_good`, password `pass_good`.
+6. **Real banks:** request Production access in the Plaid dashboard. Then set `PLAID_SECRET` to the production secret and `PLAID_ENV=production`, and add `PLAID_REDIRECT_URI=https://YOUR-APP.vercel.app/money/oauth` (also listed under **Developers → API → Allowed redirect URIs**) for banks like Chase that sign in on their own site. Connections made in sandbox don't carry over; disconnect them first.
+7. **Invite family:** Money → Family → *Create invite link* → share it. They sign up with their own email and password.
+
 ## Run locally
 ```bash
 cp .env.example .env.local   # fill in at least the two Supabase values

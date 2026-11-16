@@ -1,8 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_KEY, SUPABASE_URL } from "./env";
+import { safeNext } from "@/lib/safe-next";
 
-const PUBLIC_PATHS = ["/login", "/api/reminders"];
+// Sign-up and the invite page work signed out; the auth callback finishes email confirmation.
+const PUBLIC_PATHS = ["/login", "/api/reminders", "/signup", "/join", "/auth/callback"];
 
 /**
  * Refreshes the Supabase session cookie on every request and sends
@@ -42,11 +44,18 @@ export async function updateSession(request: NextRequest) {
   if (!signedIn && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
+    // Come back here after signing in (only for page loads, not the root).
+    if (path !== "/") url.searchParams.set("next", path + request.nextUrl.search);
     return NextResponse.redirect(url);
   }
   if (signedIn && path === "/login") {
+    return NextResponse.redirect(new URL(safeNext(request.nextUrl.searchParams.get("next")), request.url));
+  }
+  if (signedIn && path === "/signup") {
+    // Already have an account: accept the invite instead.
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/join";
     return NextResponse.redirect(url);
   }
   return response;

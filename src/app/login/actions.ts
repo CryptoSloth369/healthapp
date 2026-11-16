@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/safe-next";
 
 export type LoginState = { error?: string };
 
@@ -13,7 +14,7 @@ export async function signIn(_prev: LoginState, formData: FormData): Promise<Log
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: error.message };
-  redirect("/");
+  redirect(safeNext(String(formData.get("next") ?? "")));
 }
 
 export async function signOut() {
