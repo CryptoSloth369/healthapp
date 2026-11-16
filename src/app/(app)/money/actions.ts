@@ -7,6 +7,7 @@ import { todayLocal } from "@/lib/today";
 import { ensureHouseholdId } from "@/lib/family-data";
 import { connectItem, itemAccessToken, removeConnection, syncMoney } from "@/lib/money-data";
 import { createLinkToken, type ConnectionType } from "@/lib/plaid";
+import { seal } from "@/lib/secret-box";
 import { MANUAL_KINDS, parseMoney } from "@/lib/finance";
 
 type Result = { error?: string; warning?: string };
@@ -22,6 +23,8 @@ export async function getLinkToken(input: { type?: ConnectionType; itemId?: stri
   if (!userId) return { error: "You are signed out." };
   try {
     if (input.itemId) return { token: await createLinkToken({ userId, accessToken: await itemAccessToken(Id.parse(input.itemId)) }) };
+    // Check the encryption key before opening Plaid, so a missing setting shows up front.
+    seal("check");
     return { token: await createLinkToken({ userId, type: Type.parse(input.type) }) };
   } catch (err) {
     return fail(err);

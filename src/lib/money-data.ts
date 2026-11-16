@@ -171,6 +171,8 @@ export async function connectItem(opts: { publicToken: string; institutionId: st
   const userId = await getUserId();
   if (!userId) throw new Error("You are signed out.");
   const householdId = await ensureHouseholdId();
+  // Fail on a missing/bad FINANCE_TOKEN_KEY before Plaid creates a connection we couldn't store.
+  seal("check");
   const { access_token, item_id } = await exchangePublicToken(opts.publicToken);
   const supabase = await createClient();
   const { data: item, error } = await supabase
