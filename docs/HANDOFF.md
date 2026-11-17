@@ -28,7 +28,7 @@ All ten planned steps are built and merged to `main`, which Vercel deploys to pr
 | Back-calculated intake + deficit/surplus chart (logged vs. estimated kept separate) | Done, deployed 2026-11-15 (no migration) |
 | Coach access to back-calculated intake (`get_intake_estimates`) | Done, deployed 2026-11-15 (no migration) |
 | Energy model (step 12): one stored algorithm, personal burn, partial days, confidence, running total, Recalculate button + auto rerun | Done, deployed 2026-11-15 (migration `0006` applied) |
-| Dream journal (Mood → Dreams): own `kind` on journal entries, dream tags, coach can filter by kind and sees tags, export includes both | Built on branch; migration `0008` applied 2026-11-17, needs `0009` (tags) |
+| Dream journal (Mood → Dreams): own `kind` on journal entries, dream tags, coach can filter by kind and sees tags, export includes both | Built on branch; migrations `0008` and `0009` applied 2026-11-17 |
 | Money step 13: Health / Money switch, families + invite-only sign-up, Plaid connect, manual accounts, net worth | Built on branch; needs migration `0007`, the sign-up hook and Plaid env vars (README → Setup step 5) |
 | Offline mode + push reminders | Done |
 | AI coach (chat over your data, approval-gated suggestions) | Done |
