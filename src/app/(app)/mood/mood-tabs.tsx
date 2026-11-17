@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-/** Check-in / Journal switch at the top of the Mood tab. */
-export function MoodTabs({ active }: { active: "checkin" | "journal" }) {
+/** Check-in / Journal / Dreams switch at the top of the Mood tab. */
+export function MoodTabs({ active }: { active: "checkin" | "journal" | "dream" }) {
   const tab = (key: typeof active, href: string, text: string) => (
     <Link
       href={href}
@@ -17,6 +17,7 @@ export function MoodTabs({ active }: { active: "checkin" | "journal" }) {
     <nav className="flex gap-1 rounded-xl border border-border bg-background p-1" aria-label="Mood sections">
       {tab("checkin", "/mood", "Check-in")}
       {tab("journal", "/mood/journal", "Journal")}
+      {tab("dream", "/mood/dreams", "Dreams")}
     </nav>
   );
 }

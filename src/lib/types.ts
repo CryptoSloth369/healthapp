@@ -64,8 +64,11 @@ export type MoodEntry = {
   note: string | null;
 };
 
+export type JournalKind = "journal" | "dream";
+
 export type JournalEntry = {
   id: number;
+  kind: JournalKind;
   written_on: string;
   written_at: string;
   updated_at: string | null;

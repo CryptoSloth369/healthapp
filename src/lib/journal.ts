@@ -1,6 +1,35 @@
 /** Journal helpers. Pure functions; no I/O. */
 
+import type { JournalKind } from "./types";
+
 export const JOURNAL_MAX_CHARS = 20000;
+
+/** Per-kind screen settings. Dreams are a separate journal at /mood/dreams. */
+export const JOURNAL_KINDS: Record<
+  JournalKind,
+  { path: string; noun: string; placeholder: string; saved: string; empty: string; draftKey: string }
+> = {
+  journal: {
+    path: "/mood/journal",
+    noun: "journal entry",
+    placeholder: "What's on your mind?",
+    saved: "Saved to your journal.",
+    empty: "No entries yet. Your first one can be a single sentence.",
+    draftKey: "journal-draft",
+  },
+  dream: {
+    path: "/mood/dreams",
+    noun: "dream",
+    placeholder: "What did you dream about? People, places, feelings…",
+    saved: "Saved to your dream journal.",
+    empty: "No dreams yet. Write one down soon after waking, before it fades.",
+    draftKey: "dream-draft",
+  },
+};
+
+export function isJournalKind(v: unknown): v is JournalKind {
+  return v === "journal" || v === "dream";
+}
 
 /** Trim, normalize line endings, collapse runs of blank lines, cap the length. */
 export function normalizeBody(raw: string): string {

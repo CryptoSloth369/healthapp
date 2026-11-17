@@ -93,7 +93,7 @@ export const TOOLS = [
   def({
     name: "get_daily_summary",
     description:
-      "One row per day: food calories and macros (only if food was logged), exercise calories burned, weigh-in and smoothed trend weight, average mood (1-5), sleep hours, and how many journal entries were written. Best tool for trends and patterns. Only logged food is included; for estimated intake on unlogged days use get_intake_estimates. Max 400 days.",
+      "One row per day: food calories and macros (only if food was logged), exercise calories burned, weigh-in and smoothed trend weight, average mood (1-5), sleep hours, and how many journal entries and dreams were written. Best tool for trends and patterns. Only logged food is included; for estimated intake on unlogged days use get_intake_estimates. Max 400 days.",
     schema: Range,
     async run(input, ctx) {
       const { start, end } = checkRange(input, 400, ctx);
@@ -105,7 +105,11 @@ export const TOOLS = [
         getJournalEntries(start, end, 5000),
       ]);
       const journalCount = new Map<string, number>();
-      for (const j of journal) journalCount.set(j.written_on, (journalCount.get(j.written_on) ?? 0) + 1);
+      const dreamCount = new Map<string, number>();
+      for (const j of journal) {
+        const counts = j.kind === "dream" ? dreamCount : journalCount;
+        counts.set(j.written_on, (counts.get(j.written_on) ?? 0) + 1);
+      }
       const days = dailyTotals(food, start, end);
       const weighIns = new Map(hist.points.map((p) => [p.day, p.weight]));
       const burned = new Map<string, number>();
@@ -128,6 +132,7 @@ export const TOOLS = [
             sleep_h: m?.sleep ?? undefined,
             mood_tags: m?.tags.length ? m.tags : undefined,
             journal_entries: journalCount.get(d.day),
+            dreams: dreamCount.get(d.day),
           }).filter(([, v]) => v !== undefined),
         );
       });
@@ -214,14 +219,15 @@ export const TOOLS = [
   def({
     name: "get_journal",
     description:
-      "The user's journal entries (their own words, often dictated) with day and time. Use for questions about mood, stress, sleep, motivation, cravings, setbacks or what was going on in their life. Very long entries are shortened. Max 60 days.",
-    schema: Range,
+      "The user's journal entries (their own words, often dictated) with day and time. There are two kinds: \"journal\" (regular entries) and \"dream\" (their dream journal; the day is the morning they woke up). Use regular entries for questions about mood, stress, sleep, motivation, cravings, setbacks or what was going on in their life; use dreams when asked about dreams or sleep. Omit kind to get both. Very long entries are shortened. Max 60 days.",
+    schema: Range.extend({ kind: z.enum(["journal", "dream"]).optional() }),
     async run(input, ctx) {
       const { start, end } = checkRange(input, 60, ctx);
-      const rows = await getJournalEntries(start, end, 300);
+      const rows = await getJournalEntries(start, end, 300, input.kind);
       return rows
         .reverse()
         .map((j) => ({
+          kind: j.kind,
           day: j.written_on,
           at: j.written_at,
           text: j.body.length > JOURNAL_ENTRY_LIMIT ? `${j.body.slice(0, JOURNAL_ENTRY_LIMIT)}… [shortened]` : j.body,

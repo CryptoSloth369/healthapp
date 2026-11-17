@@ -2,23 +2,22 @@
 
 import { startTransition, useActionState, useEffect, useRef } from "react";
 import { saveJournal, type JournalFormState } from "./actions";
-import { JOURNAL_MAX_CHARS } from "@/lib/journal";
-import type { JournalEntry } from "@/lib/types";
+import { JOURNAL_KINDS, JOURNAL_MAX_CHARS } from "@/lib/journal";
+import type { JournalEntry, JournalKind } from "@/lib/types";
 import { DictationButton } from "@/components/dictation-button";
 import { button, input, label } from "@/components/ui";
 
-const DRAFT_KEY = "journal-draft";
-
-function saveDraft(value: string) {
+function saveDraft(key: string, value: string) {
   try {
-    if (value.trim()) localStorage.setItem(DRAFT_KEY, value);
-    else localStorage.removeItem(DRAFT_KEY);
+    if (value.trim()) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
   } catch {
     /* storage unavailable */
   }
 }
 
-export function JournalForm({ today, entry }: { today: string; entry: JournalEntry | null }) {
+export function JournalForm({ kind, today, entry }: { kind: JournalKind; today: string; entry: JournalEntry | null }) {
+  const info = JOURNAL_KINDS[kind];
   const [state, action, pending] = useActionState<JournalFormState, FormData>(saveJournal, {});
   const body = useRef<HTMLTextAreaElement>(null);
 
@@ -26,14 +25,14 @@ export function JournalForm({ today, entry }: { today: string; entry: JournalEnt
   useEffect(() => {
     if (entry || !body.current || body.current.value) return;
     try {
-      const draft = localStorage.getItem(DRAFT_KEY);
+      const draft = localStorage.getItem(info.draftKey);
       if (draft) body.current.value = draft;
     } catch {
       /* storage unavailable */
     }
-  }, [entry]);
+  }, [entry, info.draftKey]);
 
-  const remember = entry ? undefined : saveDraft;
+  const remember = entry ? undefined : (value: string) => saveDraft(info.draftKey, value);
 
   return (
     <form
@@ -42,19 +41,20 @@ export function JournalForm({ today, entry }: { today: string; entry: JournalEnt
       onSubmit={(e) => {
         e.preventDefault();
         const data = new FormData(e.currentTarget);
-        if (!entry) saveDraft("");
+        if (!entry) saveDraft(info.draftKey, "");
         startTransition(() => action(data));
       }}
     >
       {entry && <input type="hidden" name="id" value={entry.id} />}
+      <input type="hidden" name="kind" value={kind} />
       <label className="block">
-        <span className="sr-only">Journal entry</span>
+        <span className="sr-only">{info.noun[0].toUpperCase() + info.noun.slice(1)}</span>
         <textarea
           ref={body}
           className={`${input} min-h-48 leading-relaxed`}
           name="body"
           defaultValue={entry?.body ?? ""}
-          placeholder="What's on your mind?"
+          placeholder={info.placeholder}
           maxLength={JOURNAL_MAX_CHARS}
           onInput={remember ? (e) => remember(e.currentTarget.value) : undefined}
         />
@@ -68,7 +68,7 @@ export function JournalForm({ today, entry }: { today: string; entry: JournalEnt
 
       {state.error && <p className="text-sm text-danger">{state.error}</p>}
       <button className={`${button} w-full`} disabled={pending}>
-        {pending ? "Saving…" : entry ? "Save changes" : "Save entry"}
+        {pending ? "Saving…" : entry ? "Save changes" : kind === "dream" ? "Save dream" : "Save entry"}
       </button>
     </form>
   );

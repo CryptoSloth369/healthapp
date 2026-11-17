@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { deleteJournal } from "./actions";
-import { excerpt, groupByDay } from "@/lib/journal";
+import { JOURNAL_KINDS, excerpt, groupByDay } from "@/lib/journal";
 import { MOOD_LABELS } from "@/lib/mood";
 import { formatDay } from "@/lib/dates";
 import type { JournalEntry } from "@/lib/types";
@@ -12,6 +12,7 @@ function Entry({ e }: { e: JournalEntry }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const short = excerpt(e.body);
+  const info = JOURNAL_KINDS[e.kind];
 
   return (
     <li className="py-2.5">
@@ -21,7 +22,7 @@ function Entry({ e }: { e: JournalEntry }) {
           {e.updated_at && " · edited"}
         </span>
         <span className="flex gap-3">
-          <Link href={`/mood/journal?edit=${e.id}`} onClick={() => window.scrollTo({ top: 0 })}>
+          <Link href={`${info.path}?edit=${e.id}`} onClick={() => window.scrollTo({ top: 0 })}>
             Edit
           </Link>
           <button
@@ -29,7 +30,7 @@ function Entry({ e }: { e: JournalEntry }) {
             disabled={pending}
             className="disabled:opacity-50"
             onClick={() => {
-              if (confirm("Delete this journal entry?")) start(() => deleteJournal(e.id));
+              if (confirm(`Delete this ${info.noun}?`)) start(() => deleteJournal(e.id, e.kind));
             }}
           >
             Delete
@@ -46,8 +47,16 @@ function Entry({ e }: { e: JournalEntry }) {
   );
 }
 
-export function JournalList({ entries, moodByDay }: { entries: JournalEntry[]; moodByDay: Record<string, number> }) {
-  if (entries.length === 0) return <p className="text-sm text-muted">No entries yet. Your first one can be a single sentence.</p>;
+export function JournalList({
+  entries,
+  moodByDay,
+  empty,
+}: {
+  entries: JournalEntry[];
+  moodByDay: Record<string, number>;
+  empty: string;
+}) {
+  if (entries.length === 0) return <p className="text-sm text-muted">{empty}</p>;
 
   return (
     <div className="space-y-4">

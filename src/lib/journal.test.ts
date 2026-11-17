@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appendDictation, excerpt, groupByDay, joinSegments, normalizeBody, pageByDay, wordCount } from "./journal";
+import { JOURNAL_KINDS, appendDictation, excerpt, groupByDay, isJournalKind, joinSegments, normalizeBody, pageByDay, wordCount } from "./journal";
 
 describe("normalizeBody", () => {
   it("trims, fixes line endings and blank lines", () => {
@@ -79,5 +79,18 @@ describe("groupByDay", () => {
       ["2026-11-10", 2],
       ["2026-11-09", 1],
     ]);
+  });
+});
+
+describe("journal kinds", () => {
+  it("accepts only known kinds", () => {
+    expect(isJournalKind("journal")).toBe(true);
+    expect(isJournalKind("dream")).toBe(true);
+    expect(isJournalKind("dreams")).toBe(false);
+    expect(isJournalKind(null)).toBe(false);
+  });
+  it("keeps dreams on their own page and draft", () => {
+    expect(JOURNAL_KINDS.dream.path).not.toBe(JOURNAL_KINDS.journal.path);
+    expect(JOURNAL_KINDS.dream.draftKey).not.toBe(JOURNAL_KINDS.journal.draftKey);
   });
 });
