@@ -73,6 +73,7 @@ export type JournalEntry = {
   written_at: string;
   updated_at: string | null;
   body: string;
+  tags: string[];
 };
 
 export type ExerciseSet = { id?: number; position: number; exercise: string; weight_lb: number | null; reps: number };

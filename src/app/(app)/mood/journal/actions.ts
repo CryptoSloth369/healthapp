@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import { isDay } from "@/lib/dates";
 import { JOURNAL_KINDS, isJournalKind, normalizeBody } from "@/lib/journal";
+import { normalizeTags } from "@/lib/mood";
 import type { JournalKind } from "@/lib/types";
 
 export type JournalFormState = { error?: string };
@@ -19,11 +20,13 @@ export async function saveJournal(_prev: JournalFormState, form: FormData): Prom
   if (!isJournalKind(kind)) return { error: "Unknown journal." };
   if (!isDay(day)) return { error: "Missing date." };
   if (!body) return { error: "Write or dictate something first." };
+  // Only kinds that show the tag picker send tags; leave others' tags alone.
+  const tags = JOURNAL_KINDS[kind].tags ? { tags: normalizeTags(form.getAll("tags").map(String)) } : {};
 
   const supabase = await createClient();
   const { error } = id
-    ? await supabase.from("journal_entry").update({ kind, written_on: day, body, updated_at: new Date().toISOString() }).eq("id", id)
-    : await supabase.from("journal_entry").insert({ kind, written_on: day, body });
+    ? await supabase.from("journal_entry").update({ kind, written_on: day, body, ...tags, updated_at: new Date().toISOString() }).eq("id", id)
+    : await supabase.from("journal_entry").insert({ kind, written_on: day, body, ...tags });
   if (error) return { error: error.message };
 
   revalidatePath("/", "layout");

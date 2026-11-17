@@ -5,6 +5,7 @@ import { saveJournal, type JournalFormState } from "./actions";
 import { JOURNAL_KINDS, JOURNAL_MAX_CHARS } from "@/lib/journal";
 import type { JournalEntry, JournalKind } from "@/lib/types";
 import { DictationButton } from "@/components/dictation-button";
+import { TagPicker } from "@/components/tag-picker";
 import { button, input, label } from "@/components/ui";
 
 function saveDraft(key: string, value: string) {
@@ -16,7 +17,17 @@ function saveDraft(key: string, value: string) {
   }
 }
 
-export function JournalForm({ kind, today, entry }: { kind: JournalKind; today: string; entry: JournalEntry | null }) {
+export function JournalForm({
+  kind,
+  today,
+  entry,
+  tagSuggestions = [],
+}: {
+  kind: JournalKind;
+  today: string;
+  entry: JournalEntry | null;
+  tagSuggestions?: string[];
+}) {
   const info = JOURNAL_KINDS[kind];
   const [state, action, pending] = useActionState<JournalFormState, FormData>(saveJournal, {});
   const body = useRef<HTMLTextAreaElement>(null);
@@ -60,6 +71,7 @@ export function JournalForm({ kind, today, entry }: { kind: JournalKind; today: 
         />
       </label>
       <DictationButton target={body} onText={remember} />
+      {info.tags && <TagPicker suggestions={tagSuggestions} initial={entry?.tags ?? []} />}
 
       <label className="block">
         <span className={label}>Date</span>

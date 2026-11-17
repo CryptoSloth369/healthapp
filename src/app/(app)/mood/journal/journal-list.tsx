@@ -37,6 +37,15 @@ function Entry({ e }: { e: JournalEntry }) {
           </button>
         </span>
       </div>
+      {e.tags.length > 0 && (
+        <ul className="mt-1.5 flex flex-wrap gap-1" aria-label="Tags">
+          {e.tags.map((t) => (
+            <li key={t} className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
+              {t}
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{open ? e.body : short.text}</p>
       {short.cut && (
         <button type="button" className="mt-1 text-xs font-medium text-accent" onClick={() => setOpen(!open)}>

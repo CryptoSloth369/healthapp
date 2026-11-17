@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getJournalEntry, getLatestJournalEntries } from "@/lib/journal-data";
+import { getJournalEntry, getLatestJournalEntries, getRecentJournalTags } from "@/lib/journal-data";
 import { getMoodEntries } from "@/lib/mood-data";
 import { todayLocal } from "@/lib/today";
 import { isDay } from "@/lib/dates";
@@ -19,10 +19,13 @@ export type JournalSearchParams = { edit?: string; saved?: string; from?: string
 export async function JournalScreen({ kind, searchParams }: { kind: JournalKind; searchParams: Promise<JournalSearchParams> }) {
   const [params, today] = await Promise.all([searchParams, todayLocal()]);
   const from = isDay(params.from) && params.from < today ? params.from : today;
-  const [fetched, found] = await Promise.all([
+  const presets = JOURNAL_KINDS[kind].tags;
+  const [fetched, found, recentTags] = await Promise.all([
     getLatestJournalEntries(kind, from, PAGE + 1),
     params.edit ? getJournalEntry(Number(params.edit)) : Promise.resolve(null),
+    presets ? getRecentJournalTags(kind) : Promise.resolve([]),
   ]);
+  const tagSuggestions = presets ? [...new Set([...recentTags, ...presets])].slice(0, 16) : [];
   const { items, olderFrom } = pageByDay(fetched, PAGE);
   const moods = items.length ? await getMoodEntries(items.at(-1)!.written_on, items[0].written_on) : [];
   const moodByDay = Object.fromEntries(dailyMood(moods).map((d) => [d.day, d.mood]));
@@ -37,6 +40,7 @@ export async function JournalScreen({ kind, searchParams }: { kind: JournalKind;
       moodByDay={moodByDay}
       editing={found?.kind === kind ? found : null}
       saved={!!params.saved}
+      tagSuggestions={tagSuggestions}
     />
   );
 }
@@ -50,6 +54,7 @@ export function JournalView({
   moodByDay,
   editing,
   saved,
+  tagSuggestions,
 }: {
   kind: JournalKind;
   today: string;
@@ -59,6 +64,7 @@ export function JournalView({
   moodByDay: Record<string, number>;
   editing: JournalEntry | null;
   saved: boolean;
+  tagSuggestions: string[];
 }) {
   const info = JOURNAL_KINDS[kind];
   const dreams = kind === "dream";
@@ -78,7 +84,7 @@ export function JournalView({
           )}
         </div>
         {saved && !editing && <p className="text-sm text-accent">{info.saved}</p>}
-        <JournalForm key={editing?.id ?? "new"} kind={kind} today={today} entry={editing} />
+        <JournalForm key={editing?.id ?? "new"} kind={kind} today={today} entry={editing} tagSuggestions={tagSuggestions} />
       </section>
 
       <section className={`${card} space-y-2`}>

@@ -4,10 +4,24 @@ import type { JournalKind } from "./types";
 
 export const JOURNAL_MAX_CHARS = 20000;
 
+/** Suggested dream tags; the owner can add their own. */
+export const DREAM_TAGS = [
+  "lucid",
+  "nightmare",
+  "recurring",
+  "vivid",
+  "flying",
+  "falling",
+  "being chased",
+  "water",
+  "family",
+  "work",
+] as const;
+
 /** Per-kind screen settings. Dreams are a separate journal at /mood/dreams. */
 export const JOURNAL_KINDS: Record<
   JournalKind,
-  { path: string; noun: string; placeholder: string; saved: string; empty: string; draftKey: string }
+  { path: string; noun: string; placeholder: string; saved: string; empty: string; draftKey: string; tags: readonly string[] | null }
 > = {
   journal: {
     path: "/mood/journal",
@@ -16,6 +30,7 @@ export const JOURNAL_KINDS: Record<
     saved: "Saved to your journal.",
     empty: "No entries yet. Your first one can be a single sentence.",
     draftKey: "journal-draft",
+    tags: null,
   },
   dream: {
     path: "/mood/dreams",
@@ -24,6 +39,7 @@ export const JOURNAL_KINDS: Record<
     saved: "Saved to your dream journal.",
     empty: "No dreams yet. Write one down soon after waking, before it fades.",
     draftKey: "dream-draft",
+    tags: DREAM_TAGS,
   },
 };
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { JOURNAL_KINDS, appendDictation, excerpt, groupByDay, isJournalKind, joinSegments, normalizeBody, pageByDay, wordCount } from "./journal";
+import { normalizeTags } from "./mood";
+import { DREAM_TAGS, JOURNAL_KINDS, appendDictation, excerpt, groupByDay, isJournalKind, joinSegments, normalizeBody, pageByDay, wordCount } from "./journal";
 
 describe("normalizeBody", () => {
   it("trims, fixes line endings and blank lines", () => {
@@ -92,5 +93,10 @@ describe("journal kinds", () => {
   it("keeps dreams on their own page and draft", () => {
     expect(JOURNAL_KINDS.dream.path).not.toBe(JOURNAL_KINDS.journal.path);
     expect(JOURNAL_KINDS.dream.draftKey).not.toBe(JOURNAL_KINDS.journal.draftKey);
+  });
+  it("offers tags only on dreams, already in saved form", () => {
+    expect(JOURNAL_KINDS.journal.tags).toBeNull();
+    expect(JOURNAL_KINDS.dream.tags).toBe(DREAM_TAGS);
+    expect(normalizeTags([...DREAM_TAGS])).toEqual([...DREAM_TAGS]);
   });
 });
