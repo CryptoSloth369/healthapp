@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { getJournalEntry, getLatestJournalEntries, getRecentJournalTags } from "@/lib/journal-data";
-import { getMoodEntries } from "@/lib/mood-data";
+import { getLatestMoodNotes, getMoodEntries } from "@/lib/mood-data";
 import { todayLocal } from "@/lib/today";
 import { isDay } from "@/lib/dates";
 import { dailyMood } from "@/lib/mood";
-import { JOURNAL_KINDS, pageByDay } from "@/lib/journal";
-import type { JournalEntry, JournalKind } from "@/lib/types";
+import { JOURNAL_KINDS, checkinNotes, mergeNewestFirst, pageByDay } from "@/lib/journal";
+import type { JournalEntry, JournalKind, JournalListItem } from "@/lib/types";
 import { card } from "@/components/ui";
 import { MoodTabs } from "../mood-tabs";
 import { JournalForm } from "./journal-form";
@@ -20,13 +20,15 @@ export async function JournalScreen({ kind, searchParams }: { kind: JournalKind;
   const [params, today] = await Promise.all([searchParams, todayLocal()]);
   const from = isDay(params.from) && params.from < today ? params.from : today;
   const presets = JOURNAL_KINDS[kind].tags;
-  const [fetched, found, recentTags] = await Promise.all([
+  const [fetched, notes, found, recentTags] = await Promise.all([
     getLatestJournalEntries(kind, from, PAGE + 1),
+    // Mood check-in notes count as regular journal entries (edited from the check-in).
+    kind === "journal" ? getLatestMoodNotes(from, PAGE + 1) : Promise.resolve([]),
     params.edit ? getJournalEntry(Number(params.edit)) : Promise.resolve(null),
     presets ? getRecentJournalTags(kind) : Promise.resolve([]),
   ]);
   const tagSuggestions = presets ? [...new Set([...recentTags, ...presets])].slice(0, 16) : [];
-  const { items, olderFrom } = pageByDay(fetched, PAGE);
+  const { items, olderFrom } = pageByDay(mergeNewestFirst<JournalListItem>(fetched, checkinNotes(notes)), PAGE);
   const moods = items.length ? await getMoodEntries(items.at(-1)!.written_on, items[0].written_on) : [];
   const moodByDay = Object.fromEntries(dailyMood(moods).map((d) => [d.day, d.mood]));
 
@@ -59,7 +61,7 @@ export function JournalView({
   kind: JournalKind;
   today: string;
   from: string;
-  entries: JournalEntry[];
+  entries: JournalListItem[];
   olderFrom: string | null;
   moodByDay: Record<string, number>;
   editing: JournalEntry | null;

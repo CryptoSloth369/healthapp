@@ -1,6 +1,6 @@
 /** Journal helpers. Pure functions; no I/O. */
 
-import type { JournalKind } from "./types";
+import type { JournalKind, JournalListItem, MoodEntry } from "./types";
 
 export const JOURNAL_MAX_CHARS = 20000;
 
@@ -89,6 +89,35 @@ export function appendDictation(base: string, transcript: string): string {
   if (base === "") return text;
   if (/\s$/.test(base)) return base + text;
   return `${base} ${text}`;
+}
+
+/** Mood check-ins with a note, as journal rows (they count as journal entries). */
+export function checkinNotes(moods: MoodEntry[]): JournalListItem[] {
+  return moods
+    .filter((m) => m.note?.trim())
+    .map((m) => ({
+      id: m.id,
+      kind: "journal",
+      written_on: m.logged_on,
+      written_at: m.logged_at,
+      updated_at: null,
+      body: m.note!.trim(),
+      tags: [],
+      checkin: { id: m.id, mood: m.mood },
+    }));
+}
+
+/** Merge two newest-first lists into one, newest first (by day, then time). */
+export function mergeNewestFirst<T extends { written_on: string; written_at: string }>(a: T[], b: T[]): T[] {
+  const newer = (x: T, y: T) => x.written_on > y.written_on || (x.written_on === y.written_on && Date.parse(x.written_at) >= Date.parse(y.written_at));
+  const out: T[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length || j < b.length) {
+    if (j >= b.length || (i < a.length && newer(a[i], b[j]))) out.push(a[i++]);
+    else out.push(b[j++]);
+  }
+  return out;
 }
 
 /** First ~n characters, cut at a word boundary. */

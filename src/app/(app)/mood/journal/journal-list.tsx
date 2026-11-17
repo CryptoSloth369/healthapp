@@ -6,9 +6,9 @@ import { deleteJournal } from "./actions";
 import { JOURNAL_KINDS, excerpt, groupByDay } from "@/lib/journal";
 import { MOOD_LABELS } from "@/lib/mood";
 import { formatDay } from "@/lib/dates";
-import type { JournalEntry } from "@/lib/types";
+import type { JournalListItem } from "@/lib/types";
 
-function Entry({ e }: { e: JournalEntry }) {
+function Entry({ e }: { e: JournalListItem }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const short = excerpt(e.body);
@@ -20,22 +20,29 @@ function Entry({ e }: { e: JournalEntry }) {
         <span suppressHydrationWarning>
           {new Date(e.written_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
           {e.updated_at && " · edited"}
+          {e.checkin && ` · Check-in (${MOOD_LABELS[e.checkin.mood]})`}
         </span>
-        <span className="flex gap-3">
-          <Link href={`${info.path}?edit=${e.id}`} onClick={() => window.scrollTo({ top: 0 })}>
-            Edit
+        {e.checkin ? (
+          <Link href={`/mood?edit=${e.checkin.id}`} onClick={() => window.scrollTo({ top: 0 })}>
+            Edit check-in
           </Link>
-          <button
-            type="button"
-            disabled={pending}
-            className="disabled:opacity-50"
-            onClick={() => {
-              if (confirm(`Delete this ${info.noun}?`)) start(() => deleteJournal(e.id, e.kind));
-            }}
-          >
-            Delete
-          </button>
-        </span>
+        ) : (
+          <span className="flex gap-3">
+            <Link href={`${info.path}?edit=${e.id}`} onClick={() => window.scrollTo({ top: 0 })}>
+              Edit
+            </Link>
+            <button
+              type="button"
+              disabled={pending}
+              className="disabled:opacity-50"
+              onClick={() => {
+                if (confirm(`Delete this ${info.noun}?`)) start(() => deleteJournal(e.id, e.kind));
+              }}
+            >
+              Delete
+            </button>
+          </span>
+        )}
       </div>
       {e.tags.length > 0 && (
         <ul className="mt-1.5 flex flex-wrap gap-1" aria-label="Tags">
@@ -61,7 +68,7 @@ export function JournalList({
   moodByDay,
   empty,
 }: {
-  entries: JournalEntry[];
+  entries: JournalListItem[];
   moodByDay: Record<string, number>;
   empty: string;
 }) {
@@ -88,7 +95,7 @@ export function JournalList({
             </h3>
             <ul className="divide-y divide-border">
               {g.entries.map((e) => (
-                <Entry key={e.id} e={e} />
+                <Entry key={e.checkin ? `c${e.id}` : e.id} e={e} />
               ))}
             </ul>
           </section>

@@ -76,6 +76,9 @@ export type JournalEntry = {
   tags: string[];
 };
 
+/** A journal list row: a journal entry, or a mood check-in note shown as one. */
+export type JournalListItem = JournalEntry & { checkin?: { id: number; mood: number } };
+
 export type ExerciseSet = { id?: number; position: number; exercise: string; weight_lb: number | null; reps: number };
 
 export type ExerciseSession = {

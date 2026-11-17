@@ -7,6 +7,8 @@ import { getEntriesBetween, getEntriesDetailed } from "@/lib/food";
 import { getSessions, getTemplates } from "@/lib/exercise-data";
 import { getMoodEntries } from "@/lib/mood-data";
 import { getJournalEntries } from "@/lib/journal-data";
+import { checkinNotes } from "@/lib/journal";
+import type { JournalListItem } from "@/lib/types";
 import { dailyTotals, trendOn } from "@/lib/analytics";
 import { dailyMood } from "@/lib/mood";
 import { ACTIVITIES, activityLabel, isActivity, liftHistory, liftKey, personalRecords, volume } from "@/lib/exercise";
@@ -93,7 +95,7 @@ export const TOOLS = [
   def({
     name: "get_daily_summary",
     description:
-      "One row per day: food calories and macros (only if food was logged), exercise calories burned, weigh-in and smoothed trend weight, average mood (1-5), sleep hours, and how many journal entries and dreams were written (with that night's dream tags). Best tool for trends and patterns. Only logged food is included; for estimated intake on unlogged days use get_intake_estimates. Max 400 days.",
+      "One row per day: food calories and macros (only if food was logged), exercise calories burned, weigh-in and smoothed trend weight, average mood (1-5), sleep hours, and how many journal entries (including mood check-in notes) and dreams were written (with that night's dream tags). Best tool for trends and patterns. Only logged food is included; for estimated intake on unlogged days use get_intake_estimates. Max 400 days.",
     schema: Range,
     async run(input, ctx) {
       const { start, end } = checkRange(input, 400, ctx);
@@ -116,6 +118,7 @@ export const TOOLS = [
       const weighIns = new Map(hist.points.map((p) => [p.day, p.weight]));
       const burned = new Map<string, number>();
       for (const w of workouts) burned.set(w.performed_on, (burned.get(w.performed_on) ?? 0) + (w.kcal_burned ?? 0));
+      for (const m of moods) if (m.note?.trim()) journalCount.set(m.logged_on, (journalCount.get(m.logged_on) ?? 0) + 1);
       const mood = new Map(dailyMood(moods).map((m) => [m.day, m]));
       return days.map((d) => {
         const m = mood.get(d.day);
@@ -222,15 +225,21 @@ export const TOOLS = [
   def({
     name: "get_journal",
     description:
-      "The user's journal entries (their own words, often dictated) with day and time. There are two kinds: \"journal\" (regular entries) and \"dream\" (their dream journal; the day is the morning they woke up). Use regular entries for questions about mood, stress, sleep, motivation, cravings, setbacks or what was going on in their life; use dreams when asked about dreams or sleep. Dreams may have tags the user chose (e.g. lucid, nightmare, recurring). Omit kind to get both. Very long entries are shortened. Max 60 days.",
+      "The user's journal entries (their own words, often dictated) with day and time. There are two kinds: \"journal\" (regular entries; this includes notes written in mood check-ins, marked from_checkin with that check-in's mood) and \"dream\" (their dream journal; the day is the morning they woke up). Use regular entries for questions about mood, stress, sleep, motivation, cravings, setbacks or what was going on in their life; use dreams when asked about dreams or sleep. Dreams may have tags the user chose (e.g. lucid, nightmare, recurring). Omit kind to get both. Very long entries are shortened. Max 60 days.",
     schema: Range.extend({ kind: z.enum(["journal", "dream"]).optional() }),
     async run(input, ctx) {
       const { start, end } = checkRange(input, 60, ctx);
-      const rows = await getJournalEntries(start, end, 300, input.kind);
-      return rows
-        .reverse()
+      const [rows, moods] = await Promise.all([
+        getJournalEntries(start, end, 300, input.kind),
+        input.kind === "dream" ? Promise.resolve([]) : getMoodEntries(start, end),
+      ]);
+      const all: JournalListItem[] = [...rows, ...checkinNotes(moods)];
+      return all
+        .sort((x, y) => x.written_on.localeCompare(y.written_on) || Date.parse(x.written_at) - Date.parse(y.written_at))
         .map((j) => ({
           kind: j.kind,
+          from_checkin: j.checkin ? true : undefined,
+          mood: j.checkin?.mood,
           day: j.written_on,
           tags: j.tags.length ? j.tags : undefined,
           at: j.written_at,

@@ -22,6 +22,22 @@ export async function getMoodEntries(start: string, end: string): Promise<MoodEn
   return (data ?? []).map(normalize);
 }
 
+/** The newest `limit` check-ins with a note on or before a day, newest first. */
+export async function getLatestMoodNotes(onOrBefore: string, limit: number): Promise<MoodEntry[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("mood_entry")
+    .select(COLS)
+    .not("note", "is", null)
+    .neq("note", "")
+    .lte("logged_on", onOrBefore)
+    .order("logged_on", { ascending: false })
+    .order("logged_at", { ascending: false })
+    .limit(limit)
+    .overrideTypes<MoodEntry[], { merge: false }>();
+  return (data ?? []).map(normalize);
+}
+
 export async function getMoodEntry(id: number): Promise<MoodEntry | null> {
   const supabase = await createClient();
   const { data } = await supabase.from("mood_entry").select(COLS).eq("id", id).maybeSingle<MoodEntry>();

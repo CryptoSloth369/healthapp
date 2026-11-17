@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normalizeTags } from "./mood";
-import { DREAM_TAGS, JOURNAL_KINDS, appendDictation, excerpt, groupByDay, isJournalKind, joinSegments, normalizeBody, pageByDay, wordCount } from "./journal";
+import { DREAM_TAGS, JOURNAL_KINDS, appendDictation, checkinNotes, mergeNewestFirst, excerpt, groupByDay, isJournalKind, joinSegments, normalizeBody, pageByDay, wordCount } from "./journal";
 
 describe("normalizeBody", () => {
   it("trims, fixes line endings and blank lines", () => {
@@ -98,5 +98,22 @@ describe("journal kinds", () => {
     expect(JOURNAL_KINDS.journal.tags).toBeNull();
     expect(JOURNAL_KINDS.dream.tags).toBe(DREAM_TAGS);
     expect(normalizeTags([...DREAM_TAGS])).toEqual([...DREAM_TAGS]);
+  });
+});
+
+describe("check-in notes in the journal", () => {
+  const mood = (id: number, day: string, at: string, note: string | null) => ({
+    id, logged_on: day, logged_at: at, mood: 3, energy: null, stress: null, sleep_hours: null, tags: [], note,
+  });
+  it("keeps only check-ins with a note", () => {
+    const rows = checkinNotes([mood(1, "2026-11-17", "2026-11-17T15:00:00Z", " Tired "), mood(2, "2026-11-17", "2026-11-17T09:00:00Z", null), mood(3, "2026-11-16", "2026-11-16T09:00:00Z", "  ")]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ body: "Tired", kind: "journal", written_on: "2026-11-17", checkin: { id: 1, mood: 3 } });
+  });
+  it("merges newest first by day, then time", () => {
+    const r = (written_on: string, written_at: string) => ({ written_on, written_at });
+    const a = [r("2026-11-17", "2026-11-17T10:00:00Z"), r("2026-11-15", "2026-11-15T10:00:00Z")];
+    const b = [r("2026-11-17", "2026-11-17T12:00:00Z"), r("2026-11-16", "2026-11-16T23:00:00Z")];
+    expect(mergeNewestFirst(a, b)).toEqual([b[0], a[0], b[1], a[1]]);
   });
 });
