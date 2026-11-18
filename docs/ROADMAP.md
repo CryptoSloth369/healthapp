@@ -30,9 +30,9 @@ Decided 2026-11-16. A second area of the life app, beside Health, switched with 
 | Step | Scope | Migration |
 |---|---|---|
 | 13 ✅ | **Foundations:** Health / Money switch; families, invites, invite-only sign-up; Plaid connect + manual accounts; balances; totals (cash, liquid investments, retirement / non-liquid, other assets, debt by type, net worth); daily balance snapshots and a net-worth chart | `0007` |
-| 14 ✅ | **Spending:** card transactions via Transactions Sync; Plaid categories with your own renames and merchant rules; donut of top categories + Other with a ranked list, by month and card; transfers and card payments excluded | `0008` |
+| 14 ✅ | **Spending:** card transactions via Transactions Sync; Plaid categories with your own renames and merchant rules; donut of top categories + Other with a ranked list, by month and card; transfers and card payments excluded | `0010` |
 | 15 | **Coach:** read-only tools for accounts, net worth, spending and budget; proposals for budget changes with Apply cards | — |
-| 16 | **Budget (YNAB-style):** Ready to Assign = cash − assigned; monthly category budgets (assigned / activity / available) fed by card spending; goals with target amount and date, funded from Ready to Assign | `0009` |
+| 16 | **Budget (YNAB-style):** Ready to Assign = cash − assigned; monthly category budgets (assigned / activity / available) fed by card spending; goals with target amount and date, funded from Ready to Assign | `0011` |
 
 ## Step 12 details: energy model
 One algorithm (`runEnergyModel` in `src/lib/energy-balance.ts`) computes everything about intake and burn, saves the result, and reruns on its own.
