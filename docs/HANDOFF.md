@@ -29,7 +29,7 @@ All ten planned steps are built and merged to `main`, which Vercel deploys to pr
 | Coach access to back-calculated intake (`get_intake_estimates`) | Done, deployed 2026-11-15 (no migration) |
 | Energy model (step 12): one stored algorithm, personal burn, partial days, confidence, running total, Recalculate button + auto rerun | Done, deployed 2026-11-15 (migration `0006` applied) |
 | Dream journal (Mood → Dreams): own `kind` on journal entries, dream tags, coach can filter by kind and sees tags, export includes both | Deployed; migrations `0008` and `0009` applied 2026-11-17 |
-| Money step 13: Health / Money switch, families + invite-only sign-up, Plaid connect, manual accounts, net worth | Deployed 2026-11-16 (migration `0007` applied); Plaid sandbox env vars set 2026-11-18; first sandbox connection pending; sign-up hook pending (README → Setup step 5) |
+| Money step 13: Health / Money switch, families + invite-only sign-up, Plaid connect, manual accounts, net worth | Deployed 2026-11-16 (migration `0007` applied); Plaid sandbox working end to end 2026-11-18 (user_good); production access and sign-up hook pending (README → Setup step 5) |
 | Money step 14: card transactions, categories + rules, spending donut | Deployed 2026-11-18 (migration `0010` applied) |
 | Offline mode + push reminders | Done |
 | AI coach (chat over your data, approval-gated suggestions) | Done |
@@ -48,7 +48,7 @@ Everything has unit tests (`npm test`) and was exercised in a headless iPhone-si
 
 When one of these misbehaves, the useful evidence is a screenshot plus, for server issues, Vercel → Deployments → Functions logs. Claude API failures show Anthropic's reason in the app and log the status, request id and error body. For reminders, run the SQL checks in [`supabase/reminders-schedule.sql`](../supabase/reminders-schedule.sql).
 
-- [ ] **Plaid end to end** in sandbox (`user_good` / `pass_good`), then with a real bank after Production approval. The build sandbox can't reach Plaid; the client was tested against a fake server.
+- [ ] **Plaid end to end**: sandbox works (2026-11-18, `user_good`); still to do with a real bank after Production approval. The build sandbox can't reach Plaid; the client was tested against a fake server.
 - [ ] **Invite sign-up** end to end, including the confirmation email if "Confirm email" stays on.
 
 ## Production setup checklist (owner's account)
