@@ -21,9 +21,17 @@ describe("seal / open", () => {
     expect(() => open(parts.join("."), k)).toThrow();
   });
 
-  it("explains a missing or malformed key", () => {
+  it("explains a missing or malformed key without revealing it", () => {
     expect(() => seal("x", "")).toThrow(/FINANCE_TOKEN_KEY is not set/);
-    expect(() => seal("x", "c2hvcnQ=")).toThrow(/32 bytes/);
+    expect(() => seal("x", "c2hvcnQ=")).toThrow(/the one set is 8 characters and decodes to 5 bytes/);
+    expect(() => seal("x", "not a key!")).toThrow(/isn't base64/);
+    expect(() => seal("x", "c2hvcnQ=")).not.toThrow(/c2hvcnQ/);
+  });
+
+  it("ignores spaces, line breaks and quotes from copy-paste", () => {
+    const a = seal("secret", k);
+    expect(open(a, `  "${k}"\n`)).toBe("secret");
+    expect(open(a, `'${k}'`)).toBe("secret");
   });
 });
 

@@ -8,9 +8,15 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 function key(raw = process.env.FINANCE_TOKEN_KEY): Buffer {
-  if (!raw) throw new Error("FINANCE_TOKEN_KEY is not set. Generate one with: openssl rand -base64 32");
-  const k = Buffer.from(raw, "base64");
-  if (k.length !== 32) throw new Error("FINANCE_TOKEN_KEY must be 32 bytes, base64-encoded.");
+  // Forgive what copy-paste adds: spaces, line breaks, surrounding quotes.
+  const v = (raw ?? "").trim().replace(/^["']|["']$/g, "").trim();
+  if (!v) throw new Error("FINANCE_TOKEN_KEY is not set. Generate one with: openssl rand -base64 32");
+  const k = /^[A-Za-z0-9+/=_-]+$/.test(v) ? Buffer.from(v, "base64") : Buffer.alloc(0);
+  if (k.length !== 32)
+    // Says what arrived (never the value) so a bad copy is easy to spot.
+    throw new Error(
+      `FINANCE_TOKEN_KEY must be 32 random bytes in base64 (44 characters ending in "="); the one set is ${v.length} characters${k.length ? ` and decodes to ${k.length} bytes` : " and isn't base64"}.`,
+    );
   return k;
 }
 
