@@ -9,6 +9,7 @@ A personal health tracker (Next.js 16 PWA + Supabase + Claude API) for a single 
 - **Never edit an applied migration.** Schema changes go in a new `supabase/migrations/NNNN_name.sql`, which the owner pastes into the Supabase SQL Editor. Hand them the SQL. New tables need `user_id uuid default auth.uid()` plus a row-level-security policy `user_id = (select auth.uid())`, like the existing ones.
 - **Never commit secrets.** `.env*` is ignored (except `.env.example`). `supabase/reminders-schedule.sql` is a template; the filled-in copy contains `CRON_SECRET`.
 - **Before saying "done":** run `npm run check` (typecheck, lint, tests) and `npm run build`. For UI changes, render the screen with sample data (see `docs/DEVELOPMENT.md` → Previewing screens) and look at it at iPhone size in light and dark mode.
+- **Keep a session log.** Add or update `docs/sessions/YYYY-MM-DD-topic.md` (protocol and template in [`docs/sessions/README.md`](docs/sessions/README.md)) after each deployed step and at the end of a session. No secrets or personal data in it.
 - Keep the owner's conventions: imperial units, local calendar days, dark-first UI tokens in `globals.css`, and short plain-language copy in the UI.
 
 ## Commands

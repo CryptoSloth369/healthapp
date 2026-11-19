@@ -66,6 +66,7 @@ Tick as done. The full steps are in the [README](../README.md#setup-from-scratch
 - [ ] Profile → Activity level set to "outside logged workouts" (avoids double-counting exercise)
 
 ## How we've been working
+- **Session logs** in [`sessions/`](sessions/): one file per chat with what was done, decisions, owner actions and open items, so nothing is lost when a chat is deleted. Write or update yours after each deployed step.
 - **One roadmap step at a time.** Each step is discussed, built, verified, then summarized for the owner.
 - **Branches:** the work branch is pushed first. The owner then says "push to main", which is a fast-forward of `main` to the branch, and Vercel deploys it. Don't push to `main` without that go-ahead.
 - **Database changes** are new numbered files in `supabase/migrations/`, never edits to old ones. The owner pastes them into the Supabase SQL Editor, so give them the SQL (or a link) in the summary.
@@ -93,4 +94,4 @@ Candidates, in no particular order:
 ## Starter prompt for a new AI session
 Paste this into a new Claude Code (or other agent) session opened on this repo:
 
-> This is my personal health-tracking app. Read `docs/HANDOFF.md`, then `CLAUDE.md` and `docs/ARCHITECTURE.md`, and summarize where things stand in a few lines. Then I'll tell you what I want next. Work on a branch, run `npm run check` and `npm run build` before you say something is done, and ask me before pushing to `main`. If you add a database change, make it a new migration file and give me the SQL to paste into Supabase.
+> This is my personal health + money app. Read `docs/HANDOFF.md`, then `CLAUDE.md`, `docs/ARCHITECTURE.md` and the latest file in `docs/sessions/`, and summarize where things stand in a few lines. Then I'll tell you what I want next. Work on a branch, run `npm run check` and `npm run build` before you say something is done, and ask me before pushing to `main`. If you add a database change, make it a new migration file (check the next free number on `main` first) and give me the SQL to paste into Supabase. Keep a session log in `docs/sessions/` as you go.
