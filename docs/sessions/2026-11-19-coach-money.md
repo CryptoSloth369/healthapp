@@ -3,7 +3,7 @@
 **Asked for:** Money step 15 from the handoff: let the coach read the money data (accounts, net worth with history, spending, category rules), read-only, no migration.
 
 ## Done
-- Five read-only coach tools in `assistant/tools.ts`: `get_money_accounts`, `get_net_worth`, `get_spending`, `get_transactions`, `get_category_rules`. Registered in `agent.ts` (status labels and system-prompt rules: money is per family and only what the person can see; spending excludes transfers, card payments and income; credit cards by default; read-only; not a financial advisor) and `assistant/display.ts` ("Looked at" labels).
+- Five read-only coach tools in `assistant/tools.ts` (`99a2916`): `get_money_accounts`, `get_net_worth`, `get_spending`, `get_transactions`, `get_category_rules`. Registered in `agent.ts` (status labels and system-prompt rules: money is per family and only what the person can see; spending excludes transfers, card payments and income; credit cards by default; read-only; not a financial advisor) and `assistant/display.ts` ("Looked at" labels).
 - Pure helpers with tests: `spendingByMonth`, `spendingByMerchant`, `notSpendingTotals`, `categoryWithSource`, `spendableAccounts`/`chooseAccounts` (moved from the page loader so the Spending tab and coach choose accounts the same way) in `spending.ts`; `thinSeries` in `finance.ts`.
 - `spending-data.ts`: `getTransactions(accountIds, from, to)` and `getCategoryRules()`, reused by the Spending tab; transaction paging now has a stable order.
 - Tool tests through `runTool` with mocked loaders (`tools-money.test.ts`): totals skip hidden accounts, family-shared accounts show their owner, card payments aren't spending, rules apply, ranges are capped, a bad account filter explains the choices.
