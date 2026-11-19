@@ -2,7 +2,7 @@
 
 The fastest way for a new person or AI agent to pick up this project. Read this, then [`CLAUDE.md`](../CLAUDE.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-_Last updated: 2026-11-19, after Money went live with a real bank (Plaid production)._
+_Last updated: 2026-11-19, after Money step 15 (coach access to money) was built on a branch._
 
 ## Bigger picture
 _Added 2026-11-15._ This health app is the **first part of a larger personal "life app"**. The owner's goal is one app that helps them optimize their life by automating between the physical world and their digital life, and that lets them control as much of their digital life as possible from one place. Which areas come next (and when) isn't decided yet; record them here once it is.
@@ -31,6 +31,7 @@ All ten planned steps are built and merged to `main`, which Vercel deploys to pr
 | Dream journal (Mood → Dreams): own `kind` on journal entries, dream tags, coach can filter by kind and sees tags, export includes both | Deployed; migrations `0008` and `0009` applied 2026-11-17 |
 | Money step 13: Health / Money switch, families + invite-only sign-up, Plaid connect, manual accounts, net worth | Deployed 2026-11-16 (migration `0007` applied); Plaid **production** live 2026-11-18 (free trial, 20 connections; first real bank connected); sign-up hook not yet enabled (README → Setup step 5) |
 | Money step 14: card transactions, categories + rules, spending donut | Deployed 2026-11-18 (migration `0010` applied) |
+| Money step 15: coach reads accounts, net worth history, spending, transactions and category rules (read-only); Coach button on Money | Built 2026-11-19 on `claude/gallant-ride-p8q5j1`, waiting for "push to main" (no migration) |
 | Offline mode + push reminders | Done |
 | AI coach (chat over your data, approval-gated suggestions) | Done |
 | CSV / JSON export | Done |
@@ -74,7 +75,9 @@ Tick as done. The full steps are in the [README](../README.md#setup-from-scratch
 - **Owner context:** iPhone user, imperial units (lb, ft/in, miles). Activities: weightlifting, swimming, walking/running, jiu-jitsu. Prefers clear step-by-step setup instructions with copyable SQL.
 
 ## Next up
-**Money step 15: coach access to money** (see [`ROADMAP.md`](ROADMAP.md), "Next: Money"). Read-only coach tools for accounts and balances, net worth (with history), spending by category/merchant/month, and category rules; register them in `assistant/tools.ts`, `agent.ts` (TOOL_LABELS + a system-prompt line: money is per family and only what the person can see) and `assistant/display.ts`; test through `runTool` with mocked loaders like `tools-intake.test.ts`. No migration. Then **step 16: YNAB-style budget** (migration `0011`).
+**Money step 16: YNAB-style budget** (migration `0011`; see [`ROADMAP.md`](ROADMAP.md), "Next: Money"). Includes the coach's budget tools: a read tool for the budget and `propose_*` budget changes with Apply cards, registered like the step 15 money tools (`assistant/tools.ts`, `agent.ts` TOOL_LABELS, `assistant/display.ts`, tests in `tools-money.test.ts`). Check the next free migration number on `main` first.
+
+To verify step 15 in real use: ask the coach "Where did my money go this month?" and "How has my net worth changed?" and check its numbers against the Spending tab and the Money overview.
 
 Working notes for the money area:
 - Plaid env vars in Vercel: `PLAID_CLIENT_ID`, `PLAID_SECRET` (production), `PLAID_ENV=production`, `PLAID_REDIRECT_URI`, `FINANCE_TOKEN_KEY` (never change it; connected banks would need reconnecting).

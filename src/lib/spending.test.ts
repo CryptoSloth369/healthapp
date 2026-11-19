@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   categoryFromPlaid,
+  categoryWithSource,
+  chooseAccounts,
+  notSpendingTotals,
+  spendableAccounts,
+  spendingByMerchant,
+  spendingByMonth,
   donutSlices,
   effectiveCategory,
   isMonth,
@@ -87,5 +93,63 @@ describe("months", () => {
     expect(shiftMonth("2026-12", 1)).toBe("2027-01");
     expect(isMonth("2026-13")).toBe(false);
     expect(isMonth("2026-11")).toBe(true);
+  });
+});
+
+describe("coach summaries", () => {
+  const grocery = { pfc_primary: "FOOD_AND_DRINK", pfc_detailed: "FOOD_AND_DRINK_GROCERIES" };
+  const payment = { pfc_primary: "LOAN_PAYMENTS", pfc_detailed: "LOAN_PAYMENTS_CREDIT_CARD_PAYMENT" };
+  const txns = [
+    tx(100, { day: "2026-10-03", merchant_name: "Costco", ...grocery }),
+    tx(50, { day: "2026-11-02", merchant_name: "Costco", name: "COSTCO WHSE", ...grocery }),
+    tx(30, { day: "2026-11-05", name: "Corner Store" }),
+    tx(-10, { day: "2026-11-06", name: "Corner Store" }), // refund
+    tx(-5, { day: "2026-11-07", name: "Returned item" }), // only a refund: no merchant row
+    tx(-400, { day: "2026-11-08", name: "Payment thank you", ...payment }),
+    tx(400, { day: "2026-11-08", name: "Card payment", pfc_primary: "TRANSFER_OUT", pfc_detailed: "TRANSFER_OUT_ACCOUNT_TRANSFER" }),
+    tx(-2000, { day: "2026-11-15", name: "Payroll", pfc_primary: "INCOME", pfc_detailed: "INCOME_WAGES" }),
+  ];
+
+  it("says where a category came from", () => {
+    const rules = [{ match: "corner", category: "groceries" }];
+    expect(categoryWithSource(txns[2], rules)).toEqual({ category: "groceries", source: "rule", rule: "corner" });
+    expect(categoryWithSource({ ...txns[2], category_override: "dining" }, rules)).toEqual({ category: "dining", source: "person" });
+    expect(categoryWithSource(txns[0], rules)).toEqual({ category: "groceries", source: "bank" });
+  });
+
+  it("totals spending by month, leaving out transfers and income", () => {
+    expect(spendingByMonth(txns, [])).toEqual([
+      { month: "2026-10", total: 100, count: 1 },
+      { month: "2026-11", total: 65, count: 4 },
+    ]);
+  });
+
+  it("ranks merchants, grouping by merchant name and netting refunds", () => {
+    expect(spendingByMerchant(txns, [])).toEqual([
+      { merchant: "Costco", total: 150, count: 2, categories: ["Groceries"] },
+      { merchant: "Corner Store", total: 20, count: 2, categories: ["Shopping"] },
+    ]);
+    expect(spendingByMerchant(txns, [], 1)).toHaveLength(1);
+  });
+
+  it("adds up money in and out that isn't spending", () => {
+    expect(notSpendingTotals(txns, [])).toEqual({
+      income: { in: 2000, out: 0, count: 1 },
+      transfer: { in: 400, out: 400, count: 2 },
+    });
+  });
+
+  it("chooses accounts like the Spending tab", () => {
+    const accts = [
+      { id: "card", kind: "credit" },
+      { id: "chk", kind: "cash" },
+      { id: "brk", kind: "investment" },
+    ];
+    const spendable = spendableAccounts(accts);
+    expect(spendable.map((a) => a.id)).toEqual(["card", "chk"]);
+    expect(chooseAccounts(spendable, "cards").map((a) => a.id)).toEqual(["card"]);
+    expect(chooseAccounts(spendable, "all").map((a) => a.id)).toEqual(["card", "chk"]);
+    expect(chooseAccounts(spendable, "chk").map((a) => a.id)).toEqual(["chk"]);
+    expect(chooseAccounts(spendable, "brk")).toEqual([]);
   });
 });

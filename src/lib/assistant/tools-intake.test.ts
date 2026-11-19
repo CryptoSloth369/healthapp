@@ -37,6 +37,8 @@ vi.mock("@/lib/food", () => ({ getEntriesBetween: async () => [], getEntriesDeta
 vi.mock("@/lib/exercise-data", () => ({ getSessions: async () => [], getTemplates: async () => [] }));
 vi.mock("@/lib/mood-data", () => ({ getMoodEntries: async () => [] }));
 vi.mock("@/lib/journal-data", () => ({ getJournalEntries: async () => [] }));
+vi.mock("@/lib/money-data", () => ({ getMoney: async () => ({ accounts: [], items: [] }), getBalanceHistory: async () => [] }));
+vi.mock("@/lib/spending-data", () => ({ getTransactions: async () => [], getCategoryRules: async () => [] }));
 
 const { runTool } = await import("./tools");
 const ctx = { today: "2026-01-09" };

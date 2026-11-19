@@ -6,6 +6,7 @@ import type { AccountView, ItemView } from "@/lib/money-data";
 import { NetWorthChart } from "@/components/net-worth-chart";
 import { ConnectButtons, ReconnectButton } from "@/components/plaid-link";
 import { SyncButton } from "./money-bits";
+import { CoachLink } from "@/components/coach-link";
 
 /** Money overview, rendered from loaded data (also used for previews). */
 export function OverviewView({
@@ -37,7 +38,10 @@ export function OverviewView({
           <h1 className="text-2xl font-bold">Money</h1>
           <p className="text-xs text-muted">{lastSync ? `Synced ${ago(lastSync, now)}` : items.length ? "Not synced yet" : "Nothing connected yet"}</p>
         </div>
-        {items.length > 0 && <SyncButton />}
+        <div className="flex items-start gap-2">
+          {items.length > 0 && <SyncButton />}
+          {accounts.length > 0 && <CoachLink small />}
+        </div>
       </header>
 
       {syncError && (

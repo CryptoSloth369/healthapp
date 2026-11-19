@@ -17,6 +17,11 @@ const LOOKED: Record<string, string> = {
   get_energy_balance: "energy balance",
   get_intake_estimates: "logged and estimated intake",
   get_workout_templates: "templates",
+  get_money_accounts: "accounts",
+  get_net_worth: "net worth",
+  get_spending: "spending",
+  get_transactions: "transactions",
+  get_category_rules: "spending categories",
 };
 
 export function toDisplay(rows: StoredRow[]): Turn[] {

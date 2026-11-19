@@ -38,7 +38,8 @@ export function NetWorthChart({ points }: { points: NetWorthPoint[] }) {
     const x = (day: string) => M.left + (points.length === 1 ? iw / 2 : (daysBetween(first, day) / span) * iw);
     const y = (v: number) => M.top + (1 - (v - min) / (max - min)) * (HEIGHT - M.top - M.bottom);
     const path = points.map((p, i) => `${i ? "L" : "M"}${x(p.day).toFixed(1)},${y(p.netWorth).toFixed(1)}`).join("");
-    const xTicks = points.length === 1 ? [first] : [first, points[Math.floor(points.length / 2)].day, points[points.length - 1].day];
+    // Distinct days only: with two points the middle one is the last one.
+    const xTicks = [...new Set([first, points[Math.floor(points.length / 2)].day, points[points.length - 1].day])];
     return { x, y, ticks, path, xTicks };
   }, [points, width]);
 

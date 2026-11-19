@@ -134,6 +134,23 @@ export function netWorthSeries(points: BalancePoint[], accounts: Pick<MoneyAccou
   });
 }
 
+/**
+ * Thin a daily series to the last point of each ISO week ("week") or calendar
+ * month ("month"); "day" keeps everything. The newest point is always kept.
+ */
+export function thinSeries<T extends { day: string }>(points: T[], step: "day" | "week" | "month"): T[] {
+  if (step === "day") return points;
+  const keyOf = (day: string) => {
+    if (step === "month") return day.slice(0, 7);
+    const d = new Date(`${day}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); // back to Monday
+    return d.toISOString().slice(0, 10);
+  };
+  const last = new Map<string, T>();
+  for (const p of points) last.set(keyOf(p.day), p);
+  return [...last.values()];
+}
+
 /** "$12,345" (whole dollars) or "$12,345.67" with cents. Negative as "−$1,234". */
 export function formatMoney(n: number, opts: { cents?: boolean } = {}): string {
   const s = Math.abs(n).toLocaleString("en-US", {

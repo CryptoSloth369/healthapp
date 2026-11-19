@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { debtGroup, formatMoney, kindFromPlaid, netWorthSeries, parseMoney, totals, type MoneyAccount } from "./finance";
+import { debtGroup, formatMoney, kindFromPlaid, netWorthSeries, parseMoney, thinSeries, totals, type MoneyAccount } from "./finance";
 
 describe("kindFromPlaid", () => {
   it("sorts Plaid accounts into our kinds", () => {
@@ -69,6 +69,15 @@ describe("netWorthSeries", () => {
       { day: "2026-01-02", assets: 1000, debts: 300, netWorth: 700 },
       { day: "2026-01-03", assets: 1500, debts: 300, netWorth: 1200 },
     ]);
+  });
+});
+
+describe("thinSeries", () => {
+  const days = ["2026-11-02", "2026-11-05", "2026-11-08", "2026-11-09", "2026-11-30", "2026-12-01"].map((day) => ({ day }));
+  it("keeps the last point of each Monday-start week or month", () => {
+    expect(thinSeries(days, "day")).toBe(days);
+    expect(thinSeries(days, "week").map((p) => p.day)).toEqual(["2026-11-08", "2026-11-09", "2026-12-01"]);
+    expect(thinSeries(days, "month").map((p) => p.day)).toEqual(["2026-11-30", "2026-12-01"]);
   });
 });
 

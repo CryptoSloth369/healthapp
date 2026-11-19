@@ -14,6 +14,8 @@ const SUGGESTIONS = [
   "Plan next week's workouts based on what I usually do",
   "What patterns do you see between my sleep, mood and training?",
   "Is my calorie target still right for my goal?",
+  "Where did my money go this month?",
+  "How has my net worth changed this year?",
 ];
 
 export function Chat({ conversationId: initialId, initial }: { conversationId: number | null; initial: Turn[] }) {
@@ -95,7 +97,7 @@ export function Chat({ conversationId: initialId, initial }: { conversationId: n
       {turns.length === 0 && (
         <div className="space-y-2">
           <p className="text-sm text-muted">
-            Ask about your food, weight, workouts, lifts, mood or sleep. The coach looks up your actual logs before answering.
+            Ask about your food, weight, workouts, lifts, mood, sleep or money. The coach looks up your actual data before answering.
           </p>
           <div className="flex flex-wrap gap-1.5">
             {SUGGESTIONS.map((s) => (

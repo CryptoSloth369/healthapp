@@ -60,7 +60,7 @@ src/
     finance.ts                account kinds, totals, net worth series, money formatting
     finance-sync.ts           Plaid account/transaction → row, sync due check
     spending.ts               categories (Plaid mapping, rules, overrides), spending by category, donut slices, months
-    spending-data.ts          transactions + rules for a month and account filter (server-only)
+    spending-data.ts          transactions for accounts and days, category rules, a Spending-tab month (server-only)
     plaid.ts                  Plaid API client (fetch + Zod), link tokens, accounts, item removal
     money-data.ts             money loaders, sync, connect/disconnect (server-only)
     family-data.ts            family, members, invites (server-only)
@@ -152,6 +152,8 @@ DB functions: `public.due_reminders()` (security definer; only the DB owner can 
 3. Store the assistant content (fallback-sanitized), run the tools (Zod-validated, scoped to the user via RLS), store the `tool_result`s, and loop (max 10 rounds).
 4. Events stream to the client as NDJSON: `conversation`, `status`, `text`, `proposal`, `error`, `done`.
 5. `propose_*` tools only render cards. The writes happen in `coach/actions.ts` when the user taps.
+
+**Coach and money.** Five read-only tools: `get_money_accounts` (accounts with owner, institution, card utilization; totals; connection status), `get_net_worth` (snapshot series thinned to days/weeks/months, change over the range, accounts first seen in it; max 1,100 days), `get_spending` (by category, month and top merchants, plus income/transfer totals; credit cards by default like the Spending tab, `"all"` or one account id; max 366 days), `get_transactions` (newest 200 with category source person/rule/bank; text and category filters; max 120 days) and `get_category_rules`. They use the same loaders as the Money screens, so RLS limits them to the person's own accounts plus those shared by family. They read stored data only: no Plaid calls, so they show balances as of the last sync. The aggregation lives in `spending.ts` (`spendingByMonth`, `spendingByMerchant`, `notSpendingTotals`, `categoryWithSource`) and `finance.ts` (`thinSeries`).
 
 **Journal dictation.** `DictationButton` uses the browser's speech recognition (`SpeechRecognition` / `webkitSpeechRecognition`, on-device or Apple's servers; no API key). Results are written live into the textarea after the existing text; `joinSegments` de-duplicates iOS's repeated segments, and recognition restarts after Safari's pause timeout until Stop is tapped. Typing stops it. Without speech recognition the form shows the keyboard-mic tip. Unsaved new entries are kept in `localStorage` (`journal-draft`, or `dream-draft` for dreams). **Dream journal** (Mood → Dreams, `/mood/dreams`) is the same screen and table with `kind = 'dream'`; per-kind copy, paths and tag suggestions are in `JOURNAL_KINDS` (`src/lib/journal.ts`). Dreams use the same `TagPicker` as mood check-ins (presets in `DREAM_TAGS` plus tags used before); regular entries have no tag picker, and saving one leaves its tags alone. The coach reads entries with `get_journal` (optional `kind` filter; max 60 days, entries over 4,000 chars shortened); `get_daily_summary` counts `journal_entries` and `dreams` separately, plus `dream_tags`. The journal export includes the `kind` and `tags` columns.
 
