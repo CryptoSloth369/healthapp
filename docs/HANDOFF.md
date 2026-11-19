@@ -2,7 +2,7 @@
 
 The fastest way for a new person or AI agent to pick up this project. Read this, then [`CLAUDE.md`](../CLAUDE.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-_Last updated: 2026-11-16, after building Money step 14 (spending)._
+_Last updated: 2026-11-19, after Money went live with a real bank (Plaid production)._
 
 ## Bigger picture
 _Added 2026-11-15._ This health app is the **first part of a larger personal "life app"**. The owner's goal is one app that helps them optimize their life by automating between the physical world and their digital life, and that lets them control as much of their digital life as possible from one place. Which areas come next (and when) isn't decided yet; record them here once it is.
@@ -29,7 +29,7 @@ All ten planned steps are built and merged to `main`, which Vercel deploys to pr
 | Coach access to back-calculated intake (`get_intake_estimates`) | Done, deployed 2026-11-15 (no migration) |
 | Energy model (step 12): one stored algorithm, personal burn, partial days, confidence, running total, Recalculate button + auto rerun | Done, deployed 2026-11-15 (migration `0006` applied) |
 | Dream journal (Mood → Dreams): own `kind` on journal entries, dream tags, coach can filter by kind and sees tags, export includes both | Deployed; migrations `0008` and `0009` applied 2026-11-17 |
-| Money step 13: Health / Money switch, families + invite-only sign-up, Plaid connect, manual accounts, net worth | Deployed 2026-11-16 (migration `0007` applied); Plaid sandbox working end to end 2026-11-18 (user_good); production access and sign-up hook pending (README → Setup step 5) |
+| Money step 13: Health / Money switch, families + invite-only sign-up, Plaid connect, manual accounts, net worth | Deployed 2026-11-16 (migration `0007` applied); Plaid **production** live 2026-11-18 (free trial, 20 connections; first real bank connected); sign-up hook not yet enabled (README → Setup step 5) |
 | Money step 14: card transactions, categories + rules, spending donut | Deployed 2026-11-18 (migration `0010` applied) |
 | Offline mode + push reminders | Done |
 | AI coach (chat over your data, approval-gated suggestions) | Done |
@@ -48,7 +48,7 @@ Everything has unit tests (`npm test`) and was exercised in a headless iPhone-si
 
 When one of these misbehaves, the useful evidence is a screenshot plus, for server issues, Vercel → Deployments → Functions logs. Claude API failures show Anthropic's reason in the app and log the status, request id and error body. For reminders, run the SQL checks in [`supabase/reminders-schedule.sql`](../supabase/reminders-schedule.sql).
 
-- [ ] **Plaid end to end**: sandbox works (2026-11-18, `user_good`); still to do with a real bank after Production approval. The build sandbox can't reach Plaid; the client was tested against a fake server.
+- [x] **Plaid end to end**: sandbox (2026-11-18) and a real bank in production (2026-11-18). Still to see in real use: an OAuth bank (Chase etc., via `/money/oauth`), an investments connection and a loans connection (the free trial may not include Investments/Liabilities; "Get full access" in the Plaid dashboard if Link says a product isn't enabled). The build sandbox can't reach Plaid.
 - [ ] **Invite sign-up** end to end, including the confirmation email if "Confirm email" stays on.
 
 ## Production setup checklist (owner's account)
@@ -72,8 +72,17 @@ Tick as done. The full steps are in the [README](../README.md#setup-from-scratch
 - **Verification before claiming done:** `npm run check`, `npm run build`, migrations applied to a local Postgres, and screens rendered in Playwright with sample data. See [`DEVELOPMENT.md`](DEVELOPMENT.md).
 - **Owner context:** iPhone user, imperial units (lb, ft/in, miles). Activities: weightlifting, swimming, walking/running, jiu-jitsu. Prefers clear step-by-step setup instructions with copyable SQL.
 
-## Ideas for next time
-Nothing is in progress. Candidates, in no particular order:
+## Next up
+**Money step 15: coach access to money** (see [`ROADMAP.md`](ROADMAP.md), "Next: Money"). Read-only coach tools for accounts and balances, net worth (with history), spending by category/merchant/month, and category rules; register them in `assistant/tools.ts`, `agent.ts` (TOOL_LABELS + a system-prompt line: money is per family and only what the person can see) and `assistant/display.ts`; test through `runTool` with mocked loaders like `tools-intake.test.ts`. No migration. Then **step 16: YNAB-style budget** (migration `0011`).
+
+Working notes for the money area:
+- Plaid env vars in Vercel: `PLAID_CLIENT_ID`, `PLAID_SECRET` (production), `PLAID_ENV=production`, `PLAID_REDIRECT_URI`, `FINANCE_TOKEN_KEY` (never change it; connected banks would need reconnecting).
+- Plaid connections are limited (20 on the free trial); don't create test connections in production.
+- Another session may also be working on `main` (the dream journal landed in parallel and took migrations `0008`/`0009`). Fetch and rebase before pushing, and check the next free migration number.
+- Pushes to `main` only when the owner says so, including docs-only commits.
+
+## Ideas for later
+Candidates, in no particular order:
 - Weekly coach review: an auto-generated summary each Sunday (could reuse the reminders schedule plus a coach run).
 - Progress photos (private storage, side-by-side compare).
 - Apple Health / wearable import and selling the app: researched and written up in [`ROADMAP.md`](ROADMAP.md) (long-term sections); not planned soon.
